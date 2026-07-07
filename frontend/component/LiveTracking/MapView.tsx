@@ -78,7 +78,7 @@ const MapView = () => {
         </Marker>
       </MapContainer>
 
-      {/* Live Info Card */}
+     
 
       <div className="absolute left-5 top-5 z-999 w-64 rounded-xl bg-white p-4 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
@@ -110,7 +110,7 @@ const MapView = () => {
         </div>
       </div>
 
-      {/* Fake Controls */}
+      
 
       <div className="absolute bottom-6 right-6 z-999 flex flex-col gap-2">
         <button className="rounded-lg bg-white p-2 shadow">

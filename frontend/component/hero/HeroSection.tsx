@@ -4,7 +4,7 @@ import { Clock, Map, Navigation } from "lucide-react";
 const HeroSection = () => {
   return (
     <section className="relative flex min-h-[850px] items-center overflow-hidden px-8 py-20 lg:px-16">
-      {/* Background */}
+      
       <div className="absolute inset-0 -z-10 w-full">
         <Image
           src="/hero.png"
@@ -14,11 +14,11 @@ const HeroSection = () => {
           priority
         />
 
-        {/* White Overlay */}
+       
         <div className="absolute inset-0 bg-linear-to-r from-white via-white/20 to-transparent"></div>
       </div>
 
-      {/* Left Content */}
+    
       <div className="max-w-2xl">
         <h1 className="mb-4 text-5xl font-extrabold leading-tight lg:text-6xl">
           Smart Tracking.
@@ -31,7 +31,7 @@ const HeroSection = () => {
           time. Reach on time.
         </p>
 
-        {/* Buttons */}
+      
         <div className="mb-8 flex flex-wrap gap-4">
           <button className="flex items-center gap-2 rounded-lg bg-primary px-6 py-3 font-medium text-white hover:opacity-90">
             <Navigation size={18} />
@@ -44,7 +44,7 @@ const HeroSection = () => {
           </button>
         </div>
 
-        {/* Features */}
+       
         <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
           <div className="flex items-center gap-2">
             <Clock size={16} />
@@ -61,7 +61,7 @@ const HeroSection = () => {
         </div>
       </div>
 
-      {/* Floating Card */}
+    
       <div className="absolute bottom-10 right-10 hidden max-w-xs items-center gap-6 rounded-2xl border bg-white p-5 shadow-xl lg:flex">
 
 <section>

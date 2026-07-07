@@ -1,15 +1,27 @@
 "use client";
 
 import { Search, ChevronDown, Map } from "lucide-react";
-
-const BusSearchHeader = () => {
+type SearchProps = {
+  searchTitle?: string;
+  tileFirst?: string;
+  firstOption?: string;
+  titleSecond?: string;
+  secondOption?: string;
+};
+const BusSearchHeader = ({
+  searchTitle=" Search Bus / Stop",
+  tileFirst=" Select Route",
+  firstOption="All Routes",
+ titleSecond= "Direction",
+secondOption = "All Direction"
+}:SearchProps) => {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
       <div className="flex flex-col items-end gap-4 lg:flex-row">
-        {/* Search */}
+      
         <div className="w-full flex-1">
           <label className="mb-2 block text-sm font-medium text-gray-800">
-            Search Bus / Stop
+           {searchTitle}
           </label>
 
           <div className="relative">
@@ -23,17 +35,17 @@ const BusSearchHeader = () => {
           </div>
         </div>
 
-        {/* Route */}
+        
         <div className="w-full lg:w-52">
           <label className="mb-2 block text-sm font-medium text-gray-800">
-            Select Route
+            {tileFirst}
           </label>
 
           <div className="relative">
             <select
               className="w-full appearance-none rounded-lg border border-gray-200 bg-white py-2.5 pl-4 pr-10 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             >
-              <option>All Routes</option>
+              <option>{firstOption}</option>
               <option>Route 12A</option>
               <option>Route 7B</option>
               <option>Route 9C</option>
@@ -43,17 +55,17 @@ const BusSearchHeader = () => {
           </div>
         </div>
 
-        {/* Direction */}
+       
         <div className="w-full lg:w-52">
           <label className="mb-2 block text-sm font-medium text-gray-800">
-            Direction
+            {titleSecond}
           </label>
 
           <div className="relative">
             <select
               className="w-full appearance-none rounded-lg border border-gray-200 bg-white py-2.5 pl-4 pr-10 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             >
-              <option>All Directions</option>
+              <option>{secondOption}</option>
               <option>City Center → Airport</option>
               <option>Airport → City Center</option>
             </select>
@@ -62,7 +74,7 @@ const BusSearchHeader = () => {
           </div>
         </div>
 
-        {/* Button */}
+       
         <button className="flex h-[42px] w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 text-sm font-medium text-white transition hover:bg-green-700 lg:w-auto">
           <Map className="h-4 w-4" />
           View on Map

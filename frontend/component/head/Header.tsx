@@ -7,9 +7,8 @@ const Header = () => {
   return (
     // <section className="mx-auto max-w-7xl">
     <header className=" sticky top-0 z-50 flex items-center justify-between border-b border-gray-100 bg-white px-6 py-4">
-    {/* Logo */}
+
     <div className=" flex items-center gap-3">
-  {/* Logo */}
   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
     <Image
       src="/Logo.png"
@@ -21,7 +20,7 @@ const Header = () => {
     />
   </div>
 
-  {/* Brand Name */}
+ 
   <div className="flex flex-col">
     <h1 className="text-xl font-bold leading-tight">
       <span>Smart </span>
@@ -34,7 +33,7 @@ const Header = () => {
   </div>
 </div>
 
-    {/* Navigation */}
+   
     <nav className="hidden items-center gap-8 lg:flex">
       <Link
         href="/"
@@ -79,7 +78,7 @@ const Header = () => {
       </Link>
     </nav>
 
-    {/* Actions */}
+    
     <div className="flex items-center gap-4">
       <Link
         href="/login"
@@ -96,7 +95,6 @@ const Header = () => {
       </Link>
     </div>
   </header>
-  // </section>
   )
 }
 

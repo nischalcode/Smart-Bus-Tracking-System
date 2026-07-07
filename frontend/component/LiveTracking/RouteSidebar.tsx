@@ -24,7 +24,7 @@ const RouteSidebar = ({
 }: RouteSidebarProps) => {
   return (
     <div className="flex h-[600px] w-full flex-col rounded-2xl bg-white p-6 shadow-md lg:w-1/3">
-      {/* Heading */}
+     
       <h3 className="mb-2 text-xl font-bold">
        {title}
       </h3>
@@ -33,7 +33,7 @@ const RouteSidebar = ({
        {description}
       </p>
 
-      {/* Search */}
+     
       {showSearch && (
         <div className="relative mb-8">
           <input
@@ -47,7 +47,7 @@ const RouteSidebar = ({
       )}
 
 
-      {/* Routes */}
+    
       <div className="flex-1 overflow-y-auto pr-2">
         <h4 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
           Popular Routes
@@ -64,7 +64,7 @@ const RouteSidebar = ({
                     : "border border-gray-100 bg-white hover:border-gray-200"
                 }`}
             >
-              {/* Left */}
+             
               <div className="flex items-center gap-4">
                 <div
                   className={`flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold ${route.color}`}
@@ -83,7 +83,7 @@ const RouteSidebar = ({
                 </div>
               </div>
 
-              {/* Right */}
+            
               {route.active ? (
                 <span className="rounded border border-primary/20 bg-green-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
                   {route.status}
@@ -96,7 +96,7 @@ const RouteSidebar = ({
         </div>
       </div>
 
-      {/* Footer */}
+     
       <div className="mt-4 border-t border-gray-100 pt-4">
         <Link
           href="/routes"

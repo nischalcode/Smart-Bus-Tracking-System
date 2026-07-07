@@ -1,7 +1,7 @@
 'use client'
 import dynamic from "next/dynamic";
 import RouteSidebar from "./RouteSidebar";
-// import MapView from "./MapView";
+
 const routes = [
   {
     number: "12A",

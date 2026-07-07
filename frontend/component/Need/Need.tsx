@@ -49,7 +49,7 @@ const WhyChoose = () => {
   return (
     <section className="py-20 px-6 lg:px-16 bg-white  relative">
       <div className=" mx-auto flex flex-col lg:flex-row items-center gap-16">
-        {/* Left Side */}
+       
         <div className="w-full lg:w-1/2 p-10">
           <h2 className="text-3xl lg:text-4xl font-bold mb-2">
             Why Choose Smart Bus Tracking?
@@ -80,10 +80,10 @@ const WhyChoose = () => {
           </div>
         </div>
 
-        {/* Right Side */}
+       
         <div className="w-full lg:w-1/2 flex justify-center relative">
           <div className="relative w-[300px] h-[550px] overflow-visible">
-            {/* Phone */}
+           
             <div className="absolute inset-0 bg-white rounded-[40px] border-8 border-gray-900 shadow-2xl overflow-hidden">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-2xl"></div>
 
@@ -139,7 +139,7 @@ const WhyChoose = () => {
               </div>
             </div>
 
-            {/* Bell */}
+           
             <div className="absolute top-24 -right-10 z-50 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-xl">
               <Bell className="w-7 h-7" />
             </div>

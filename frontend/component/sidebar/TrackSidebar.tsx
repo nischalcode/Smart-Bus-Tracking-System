@@ -14,6 +14,7 @@ import {
   Headset,
   MapPin,
 } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 const menuItems = [
   {
@@ -25,7 +26,6 @@ const menuItems = [
     title: "Track Bus",
     href: "/track-bus",
     icon: Bus,
-    active: true,
   },
   {
     title: "Routes",
@@ -55,11 +55,12 @@ const menuItems = [
 ];
 
 const TrackSidebar = () => {
+  const pathname = usePathname();
   return (
     <aside className="hidden h-screen w-64 shrink-0 flex-col justify-between overflow-y-auto border-r border-gray-200 bg-white md:flex">
-      {/* Top */}
+     
       <div>
-        {/* Logo */}
+       
         <Link href={'/'}>
         <div className="flex h-20 items-center border-b border-gray-200 px-6">
           <div className="flex items-center gap-3">
@@ -84,10 +85,11 @@ const TrackSidebar = () => {
         </div>
         </Link>
 
-        {/* Navigation */}
+       
         <nav className="mt-6 space-y-1 px-3">
           {menuItems.map((item) => {
             const Icon = item.icon;
+            const isActive = pathname === item.href;
 
             return (
               <Link
@@ -95,7 +97,7 @@ const TrackSidebar = () => {
                 href={item.href}
                 className={`flex items-center gap-3 rounded-lg border-l-4 px-3 py-3 text-sm font-medium transition
                   ${
-                    item.active
+                   isActive
                       ? "border-primary bg-green-50 text-primary"
                       : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-black"
                   }`}
@@ -109,9 +111,9 @@ const TrackSidebar = () => {
         </nav>
       </div>
 
-      {/* Bottom */}
+     
       <div className="space-y-6 px-4 pb-6">
-        {/* Download App */}
+       
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50 p-4 text-center">
           <h3 className="text-sm font-semibold">
             Download Our App
@@ -137,18 +139,14 @@ const TrackSidebar = () => {
             />
           </div>
 
-          {/* Phone Preview */}
-          {/* <div className="mx-auto mt-5 flex h-24 w-28 items-end justify-center rounded-t-xl border-4 border-gray-800 bg-white">
-            <MapPin className="mb-5 h-8 w-8 text-primary" />
-          </div> */}
 
 <div className="mt-5 flex justify-center overflow-hidden">
   <div className="relative h-32 w-20 rounded-t-[20px] border-[5px] border-gray-800 bg-white shadow-lg">
 
-    {/* Notch */}
+   
     <div className="absolute left-1/2 top-0 h-3 w-8 -translate-x-1/2 rounded-b-xl bg-gray-800"></div>
 
-    {/* Map */}
+   
     <div className="mt-4 h-full bg-green-50">
       <div className="flex h-full items-center justify-center">
         <MapPin className="h-8 w-8 text-primary" />
@@ -159,7 +157,7 @@ const TrackSidebar = () => {
 </div>
         </div>
 
-        {/* Support */}
+      
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100">
             <Headset className="h-5 w-5 text-gray-600" />

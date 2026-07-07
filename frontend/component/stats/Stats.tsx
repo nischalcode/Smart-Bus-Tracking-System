@@ -41,12 +41,12 @@ import {
                   key={index}
                   className="flex items-center gap-4"
                 >
-                  {/* Icon */}
+                  
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-primary">
                     <Icon className="h-6 w-6" />
                   </div>
   
-                  {/* Text */}
+               
                   <div>
                     <h3 className="text-2xl font-bold text-gray-900">
                       {stat.value}
@@ -57,7 +57,7 @@ import {
                     </p>
                   </div>
   
-                  {/* Divider */}
+                
                   {index !== stats.length - 1 && (
                     <div className="ml-6 hidden h-12 w-px bg-gray-200 lg:block"></div>
                   )}
