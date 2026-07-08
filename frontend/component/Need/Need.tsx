@@ -82,7 +82,7 @@ const WhyChoose = () => {
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-2xl"></div>
 
               <div className="relative h-full bg-gray-100">
-                {/* Map */}
+              
                 <MapContainer
                   center={[27.7172, 85.324]}
                   zoom={14}
@@ -114,7 +114,6 @@ const WhyChoose = () => {
                   </Marker>
                 </MapContainer>
 
-                {/* Card */}
                 <div className="absolute top-12 left-4 right-4 z-20 rounded-xl bg-white p-4 shadow-md">
                   <h3 className="text-xl font-bold">12A</h3>
 

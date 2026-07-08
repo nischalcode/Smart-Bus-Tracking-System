@@ -8,9 +8,7 @@ import {
   Route,
   Calendar,
   Bell,
-  ChartColumn,
   CircleHelp,
-  Smartphone,
   Headset,
   MapPin,
 } from "lucide-react";
@@ -41,11 +39,6 @@ const menuItems = [
     title: "Notifications",
     href: "/notifications",
     icon: Bell,
-  },
-  {
-    title: "Reports",
-    href: "/reports",
-    icon: ChartColumn,
   },
   {
     title: "About Us",
