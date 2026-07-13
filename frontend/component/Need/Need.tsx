@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import {Marker,Polyline,Popup,TileLayer,MapContainer} from "react-leaflet";
 import L from "leaflet";
 
+import { initLeafletIcons } from "@/utils/leaflet";
+
 const features = [
   {
     title: "Save Time",
@@ -30,15 +32,7 @@ const features = [
 
 const WhyChoose = () => {
   useEffect(() => {
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
-
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl:
-        "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-      shadowUrl:
-        "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-    });
+    initLeafletIcons();
   }, []);
   return (
     <section className="py-20 px-6 lg:px-16 bg-white  relative">
@@ -76,7 +70,7 @@ const WhyChoose = () => {
 
        
         <div className="w-full lg:w-1/2 flex justify-center relative">
-          <div className="relative w-[300px] h-[550px] overflow-visible">
+          <div className="relative w-75 h-137.5 overflow-visible">
            
             <div className="absolute inset-0 bg-white rounded-[40px] border-8 border-gray-900 shadow-2xl overflow-hidden">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-2xl"></div>

@@ -3,42 +3,44 @@
 import { CheckCheck, ChevronDown } from "lucide-react";
 import { useState } from "react";
 
-const categories = [
-    {
-      name: "All",
-      count: 24,
-      badge: "bg-primary text-white",
+import { NotificationData } from "@/utils/api";
+
+type Props = {
+  notifications: NotificationData[];
+  activeCategory: string;
+  onCategoryChange: (category: string) => void;
+  onMarkAllRead: () => void;
+};
+
+const NotificationHeader = ({ notifications, activeCategory, onCategoryChange, onMarkAllRead }: Props) => {
+  const [loading, setLoading] = useState(false);
+  const counts = notifications.reduce(
+    (acc, n) => {
+      const badge = (n.badge || "").toLowerCase();
+      acc.all += 1;
+      if (badge === "alert") acc.alerts += 1;
+      if (badge === "service update") acc.serviceUpdates += 1;
+      if (badge === "promotion") acc.promotions += 1;
+      if (badge === "general") acc.general += 1;
+      return acc;
     },
-    {
-      name: "Alerts",
-      count: 6,
-      badge: "bg-red-100 text-red-600",
-    },
-    {
-      name: "Service Updates",
-      count: 8,
-      badge: "bg-blue-100 text-blue-600",
-    },
-    {
-      name: "Promotions",
-      count: 2,
-      badge: "bg-purple-100 text-purple-600",
-    },
-    {
-      name: "General",
-      count: 8,
-      badge: "bg-gray-200 text-gray-700",
-    },
+    { all: 0, alerts: 0, serviceUpdates: 0, promotions: 0, general: 0 }
+  );
+
+  const categories = [
+    { name: "All", count: counts.all, badge: "bg-primary text-white" },
+    { name: "Alerts", count: counts.alerts, badge: "bg-red-100 text-red-600" },
+    { name: "Service Updates", count: counts.serviceUpdates, badge: "bg-blue-100 text-blue-600" },
+    { name: "Promotions", count: counts.promotions, badge: "bg-purple-100 text-purple-600" },
+    { name: "General", count: counts.general, badge: "bg-gray-200 text-gray-700" },
   ];
 
-const NotificationHeader = () => {
-    const [activeCategory, setActiveCategory] = useState("All")
   return (
     <div className="mb-6 flex flex-col justify-between gap-4 rounded-xl border border-gray-200 bg-white p-2 shadow-sm lg:flex-row lg:items-center">
       <div className="flex flex-wrap items-center gap-2">
         {categories.map((item) => (
           <button
-          onClick={() => setActiveCategory(item.name)}
+            onClick={() => onCategoryChange(item.name)}
             key={item.name}
             className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition
                 ${
@@ -49,19 +51,30 @@ const NotificationHeader = () => {
           >
             {item.name}
 
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${item.badge}`}
-            >
+            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${item.badge}`}>
               {item.count}
             </span>
           </button>
         ))}
       </div>
 
-      <button className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
+      <button
+        onClick={async () => {
+          try {
+            setLoading(true);
+            await onMarkAllRead();
+          } finally {
+            setLoading(false);
+          }
+        }}
+        disabled={loading}
+        className={`flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 ${
+          loading ? "opacity-60 cursor-wait" : ""
+        }`}
+      >
         <CheckCheck className="h-4 w-4" />
 
-        <span>Mark all as read</span>
+        <span>{loading ? "Marking..." : "Mark all as read"}</span>
 
         <ChevronDown className="h-4 w-4" />
       </button>

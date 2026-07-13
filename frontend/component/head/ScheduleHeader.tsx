@@ -1,3 +1,5 @@
+"use client";
+
 import {
     IoCalendarOutline,
     IoChevronDown,
@@ -13,7 +15,7 @@ const ScheduleHeader = () => {
         <div className="relative">
           <input
             type="text"
-            value="May 31, 2025"
+            value={new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
             readOnly
             className="w-full rounded-lg border border-gray-300 py-2.5 pl-4 pr-10 text-sm text-gray-900 focus:border-green-500 focus:outline-none"
           />

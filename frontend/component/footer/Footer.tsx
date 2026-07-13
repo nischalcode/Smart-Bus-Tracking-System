@@ -6,7 +6,7 @@ const Footer = () => {
             <p className="text-lg font-semibold"> &copy; Smart <span className="text-primary">Bus</span> Tracking System</p>
         </div>
         <div className="flex justify-end items-center">
-            <p className="text-lg font-semi-bold">
+            <p className="text-lg font-semibold">
                 Created By Team Blaze
             </p>
         </div>

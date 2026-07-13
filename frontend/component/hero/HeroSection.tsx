@@ -1,9 +1,12 @@
+'use client'
 import Image from "next/image";
 import { Clock, Map, Navigation } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const HeroSection = () => {
+   const router = useRouter();
   return (
-    <section className="relative flex min-h-[850px] items-center overflow-hidden px-8 py-20 lg:px-16">
+    <section className="relative flex min-h-212.5 items-center overflow-hidden px-8 py-20 lg:px-16">
       
       <div className="absolute inset-0 -z-10 w-full">
         <Image
@@ -33,12 +36,14 @@ const HeroSection = () => {
 
       
         <div className="mb-8 flex flex-wrap gap-4">
-          <button className="flex items-center gap-2 rounded-lg bg-primary px-6 py-3 font-medium text-white hover:opacity-90">
+          <button  onClick={() => router.push("/track-bus")}
+           className="flex items-center gap-2 rounded-lg bg-primary px-6 py-3 font-medium text-white hover:opacity-90">
             <Navigation size={18} />
             Track Your Bus
           </button>
 
-          <button className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 font-medium hover:bg-gray-100">
+          <button  onClick={() => router.push("/routes")}
+          className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 font-medium hover:bg-gray-100">
             <Map size={18} />
             View Routes
           </button>

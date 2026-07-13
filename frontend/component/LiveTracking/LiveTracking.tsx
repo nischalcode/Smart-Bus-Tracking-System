@@ -1,54 +1,85 @@
-'use client'
+"use client";
+
+import { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import RouteSidebar from "./RouteSidebar";
+import { useLiveTracking } from "@/hooks/useLiveTracking";
 
-const routes = [
-  {
-    number: "12A",
-    route: "City Center → Airport",
-    frequency: "Every 10 min",
-    status: "Live",
-    color: "bg-primary text-white",
-    active: true,
-  },
-  {
-    number: "7B",
-    route: "Central Park → Tech Hub",
-    frequency: "Every 12 min",
-    color: "bg-blue-100 text-blue-600",
-    active: false,
-  },
-  {
-    number: "9C",
-    route: "Railway Station → City Center",
-    frequency: "Every 15 min",
-    color: "bg-purple-100 text-purple-600",
-    active: false,
-  },
-  {
-    number: "4D",
-    route: "University → Market Street",
-    frequency: "Every 20 min",
-    color: "bg-yellow-100 text-yellow-600",
-    active: false,
-  },
-];
 const MapView = dynamic(() => import("./MapView"), {
-    ssr: false,
-    loading: () => (
-      <div className="h-[600px] w-full rounded-2xl bg-gray-100 animate-pulse lg:w-2/3" />
-    ),
-  });
+  ssr: false,
+  loading: () => (
+    <div className="h-[600px] w-full rounded-2xl bg-gray-100 animate-pulse lg:w-2/3" />
+  ),
+});
+
 const LiveTracking = () => {
+  const { routes, loadingRoutes, trackingByRouteId } = useLiveTracking();
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const sidebarRoutes = useMemo(() => {
+    return routes.map((r, idx) => {
+      const t = trackingByRouteId.get(r._id);
+      return {
+        number: r.routeNo,
+        route: `${r.from} → ${r.to}`,
+        frequency: `Every ${r.frequency}`,
+        status: t?.status || r.status,
+        color: r.color || "bg-primary text-white",
+        active: idx === selectedIndex,
+        hasTracking: !!t,
+      };
+    });
+  }, [routes, selectedIndex, trackingByRouteId]);
+
+  const activeRoute = routes[selectedIndex];
+  const activeRouteCoords = activeRoute?.pathCoordinates || [];
+  const activeTracking = activeRoute
+    ? trackingByRouteId.get(activeRoute._id)
+    : undefined;
+
+  const mapCenter: [number, number] | undefined = activeTracking
+    ? [activeTracking.latitude, activeTracking.longitude]
+    : activeRouteCoords.length > 0
+    ? activeRouteCoords[0]
+    : undefined;
+
   return (
     <section className="bg-gray-50 py-12">
       <div className="mx-auto max-w-7xl px-6">
         <div className="flex flex-col gap-8 lg:flex-row">
-          {/* Left Sidebar */}
-          <RouteSidebar routes={routes} />
+          {loadingRoutes ? (
+            <div className="flex h-[600px] w-full items-center justify-center rounded-2xl bg-white shadow-md lg:w-1/3 animate-pulse">
+              <span className="text-gray-500 font-medium">Loading Routes...</span>
+            </div>
+          ) : (
+            <RouteSidebar
+              routes={sidebarRoutes}
+              title="Track Your Bus Live"
+              description="Select a route to display its path and live bus location."
+              showSearch={true}
+              onSelect={setSelectedIndex}
+            />
+          )}
 
-          {/* Right Map */}
-          <MapView />
+          <MapView
+            center={mapCenter}
+            routeCoordinates={activeRouteCoords}
+            routeLabel={
+              activeRoute
+                ? `${activeRoute.from} → ${activeRoute.to}`
+                : undefined
+            }
+            showBus={!!activeTracking}
+            busPosition={
+              activeTracking
+                ? [activeTracking.latitude, activeTracking.longitude]
+                : undefined
+            }
+            busName={activeTracking?.bus?.busNumber || "Bus"}
+            speed={activeTracking?.speed}
+            eta={activeTracking?.eta}
+            nextStop={activeTracking?.nextStop}
+          />
         </div>
       </div>
     </section>

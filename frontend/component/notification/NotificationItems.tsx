@@ -10,6 +10,8 @@ interface NotificationItemsProps {
   iconColor?: string;
   badgeBg?: string;
   badgeColor?: string;
+  read?: boolean;
+  onMarkRead?: () => void;
 }
 
 const NotificationItems = ({
@@ -22,9 +24,11 @@ const NotificationItems = ({
   iconColor = "text-red-500",
   badgeBg = "bg-red-100",
   badgeColor = "text-red-600",
+  read = false,
+  onMarkRead,
 }: NotificationItemsProps) => {
   return (
-    <section className="w-full rounded-lg border border-gray-200 bg-white p-4">
+    <section className={`w-full rounded-lg border border-gray-200 bg-white p-4 ${read ? "opacity-60" : ""}`}>
       <div className="flex gap-4">
         {/* Icon */}
         <div
@@ -45,11 +49,20 @@ const NotificationItems = ({
             {description}
           </p>
 
-          <span
-            className={`mt-3 inline-flex rounded-md px-3 py-1 text-xs font-medium ${badgeBg} ${badgeColor}`}
-          >
-            {badge}
-          </span>
+          <div className="mt-3 flex items-center gap-3">
+            <span className={`inline-flex rounded-md px-3 py-1 text-xs font-medium ${badgeBg} ${badgeColor}`}>
+              {badge}
+            </span>
+
+            {!read && onMarkRead && (
+              <button
+                onClick={onMarkRead}
+                className="ml-2 rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200"
+              >
+                Mark as read
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </section>

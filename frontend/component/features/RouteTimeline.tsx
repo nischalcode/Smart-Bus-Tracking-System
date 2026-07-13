@@ -1,57 +1,60 @@
-import React from "react";
+"use client";
 
-interface RouteStop {
-  id: number;
-  name: string;
-  time: string;
-  type: "start" | "stop" | "end";
+import React from "react";
+import type { RouteStop } from "@/utils/api";
+
+type Props = {
+  stops?: RouteStop[];
+  firstBus?: string;
+};
+
+function computeTime(baseTime: string, offsetMin: number): string {
+  const [time, period] = baseTime.split(" ");
+  let [h, m] = time.split(":").map(Number);
+  m += offsetMin;
+  while (m >= 60) {
+    h += 1;
+    m -= 60;
+  }
+  while (m < 0) {
+    h -= 1;
+    m += 60;
+  }
+  let newPeriod = period;
+  if (h >= 12) {
+    newPeriod = "PM";
+    if (h > 12) h -= 12;
+  } else if (h === 0) {
+    h = 12;
+    newPeriod = "AM";
+  } else {
+    newPeriod = period;
+  }
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")} ${newPeriod}`;
 }
 
-const routeStops: RouteStop[] = [
-  {
-    id: 1,
-    name: "City Center",
-    time: "05:30 AM",
-    type: "start",
-  },
-  {
-    id: 2,
-    name: "Green Street",
-    time: "05:33 AM",
-    type: "stop",
-  },
-  {
-    id: 3,
-    name: "River View",
-    time: "05:37 AM",
-    type: "stop",
-  },
-  {
-    id: 4,
-    name: "Airport",
-    time: "06:02 AM",
-    type: "end",
-  },
-];
+const RouteTimeline = ({ stops, firstBus = "05:30 AM" }: Props) => {
+  if (!stops || stops.length === 0) {
+    return (
+      <div className="p-5">
+        <h4 className="mb-5 text-sm font-bold text-gray-900">Route Stops</h4>
+        <p className="text-sm text-gray-400">Select a schedule to view stops</p>
+      </div>
+    );
+  }
 
-const RouteTimeline = () => {
   return (
     <div className="p-5">
-      <h4 className="mb-5 text-sm font-bold text-gray-900">
-        Route Stops
-      </h4>
+      <h4 className="mb-5 text-sm font-bold text-gray-900">Route Stops</h4>
 
       <div className="relative">
-        {routeStops.map((stop, index) => (
-          <div key={stop.id} className="relative flex gap-4 pb-8 ">
-          
+        {stops.map((stop, index) => (
+          <div key={stop._id || index} className="relative flex gap-4 pb-8">
             <div className="relative flex flex-col items-center">
-             
-              {index !== routeStops.length - 1 && (
+              {index !== stops.length - 1 && (
                 <div className="absolute top-5 h-full w-0.5 bg-gray-200"></div>
               )}
 
-             
               {stop.type === "start" || stop.type === "end" ? (
                 <div className="z-10 h-4 w-4 rounded-full border-4 border-green-600 bg-white"></div>
               ) : (
@@ -61,7 +64,6 @@ const RouteTimeline = () => {
               )}
             </div>
 
-           
             <div className="flex flex-1 items-center justify-between">
               <div className="flex items-center gap-2">
                 <span
@@ -88,13 +90,12 @@ const RouteTimeline = () => {
               </div>
 
               <span className="text-sm text-gray-600">
-                {stop.time}
+                {computeTime(firstBus, stop.timeOffset ?? 0)}
               </span>
             </div>
           </div>
         ))}
 
-       
         <div className="ml-[7px] mt-1 flex flex-col gap-1">
           <div className="h-1 w-1 rounded-full bg-gray-300"></div>
           <div className="h-1 w-1 rounded-full bg-gray-300"></div>
