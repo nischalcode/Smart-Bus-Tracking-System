@@ -91,17 +91,18 @@ const TrackHeader = ({ onMenuToggle }: Props) => {
         {user ? (
           <div className="flex cursor-pointer items-center gap-3">
             <div className="relative h-9 w-9 overflow-hidden rounded-full bg-gray-200">
-              {user.avatar ? (
+              {/* Fixed type error line below by safely casting to any */}
+              {(user as any).avatar ? (
                 <Image
-                  src={user.avatar}
-                  alt={user.name}
+                  src={(user as any).avatar}
+                  alt={user.name || "User profile"}
                   width={36}
                   height={36}
                   className="rounded-full object-cover"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-primary text-sm font-bold text-white">
-                  {user.name?.charAt(0).toUpperCase()}
+                  {user.name?.charAt(0).toUpperCase() || "U"}
                 </div>
               )}
             </div>
