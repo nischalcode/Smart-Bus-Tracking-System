@@ -12,6 +12,7 @@ import PageHeader from "@/component/ui/PageHeader";
 import Modal from "@/component/ui/Modal";
 import ConfirmDialog from "@/component/ui/ConfirmDialog";
 import LoadingSpinner from "@/component/ui/LoadingSpinner";
+import RouteMapPicker from "@/component/admin/RouteMapPicker"
 
 const routeSchema = z.object({
   routeNo: z.string().min(1, "Route number is required"),
@@ -86,28 +87,55 @@ export default function RoutesPage() {
   };
 
   const onSubmit = async (data: RouteFormData) => {
+    if (coordinates.length < 2) {
+      alert("Please select at least 2 points on the map.");
+      return;
+    }
+
     setSubmitting(true);
+
     try {
-      const { pathCoordinatesText, ...rest } = data;
-      const payload: Record<string, unknown> = { ...rest };
-      if (pathCoordinatesText?.trim()) {
-        payload.pathCoordinates = JSON.parse(pathCoordinatesText);
-      }
+      const payload = {
+        routeNo: data.routeNo,
+        from: data.from,
+        to: data.to,
+        via: data.via,
+        frequency: data.frequency,
+        status: data.status,
+        active: data.active,
+
+        // send coordinates directly from RouteMapPicker state
+        pathCoordinates: coordinates,
+      };
+
+      console.log(payload);
+
       if (editingRoute) {
         await fetchApi<RouteResponse>(
           `/routes/${editingRoute._id}`,
-          { method: "PUT", body: JSON.stringify(payload) },
+          {
+            method: "PUT",
+            body: JSON.stringify(payload),
+          },
           token ?? undefined
         );
       } else {
         await fetchApi<RouteResponse>(
           "/routes",
-          { method: "POST", body: JSON.stringify(payload) },
+          {
+            method: "POST",
+            body: JSON.stringify(payload),
+          },
           token ?? undefined
         );
       }
+
       setShowModal(false);
+
       reset();
+
+      setCoordinates([]);
+
       fetchRoutes();
     } catch (err) {
       console.error(err);
@@ -174,6 +202,8 @@ export default function RoutesPage() {
     },
   ];
 
+  const [coordinates, setCoordinates] = useState<[number, number][]>([]);
+  
   if (loading) return <LoadingSpinner size="lg" />;
 
   return (
@@ -304,11 +334,15 @@ export default function RoutesPage() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Path Coordinates
             </label>
-            <textarea
+            {/* <textarea
               {...register("pathCoordinatesText")}
               rows={3}
               placeholder='JSON array, e.g. [[12.97,77.59],[12.98,77.60]]'
               className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-xs focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            /> */}
+            <RouteMapPicker
+                value={coordinates}
+                onChange={setCoordinates}
             />
           </div>
 

@@ -3,6 +3,14 @@ import { Schema, model } from "mongoose";
 const busSchema = new Schema(
   {
     busNumber: { type: String, required: true, unique: true },
+    location: {
+      lat: Number,
+      lng: Number,
+      updatedAt: {
+        type: Date,
+        default: Date.now,
+      }
+    },
     modelName: { type: String },
     capacity: { type: Number },
     status: {

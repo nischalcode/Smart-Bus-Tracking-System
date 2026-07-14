@@ -8,7 +8,7 @@ import { useLiveTracking } from "@/hooks/useLiveTracking";
 const MapView = dynamic(() => import("./MapView"), {
   ssr: false,
   loading: () => (
-    <div className="h-[600px] w-full rounded-2xl bg-gray-100 animate-pulse lg:w-2/3" />
+    <div className="h-150 w-full rounded-2xl bg-gray-100 animate-pulse lg:w-2/3" />
   ),
 });
 
