@@ -3,7 +3,7 @@ import Footer from "@/component/footer/Footer";
 import Header from "@/component/head/Header";
 import HeroSection from "@/component/hero/HeroSection";
 import LiveTracking from "@/component/LiveTracking/LiveTracking";
-import WhyChoose from "@/component/Need/Need";
+import NeedWrapper from "@/component/Need/NeedWrapper";
 import Stats from "@/component/stats/Stats";
 
 
@@ -15,7 +15,7 @@ export default function Home() {
      <Feature/>
      <LiveTracking/>
      <Stats/>
-     <WhyChoose/>
+     <NeedWrapper/>
      <Footer/>
     </div>
   );

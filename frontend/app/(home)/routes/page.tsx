@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import BusSearchHeader from "@/component/head/BusSearchHeader";
-import MapView from "@/component/LiveTracking/MapView";
+import dynamic from "next/dynamic";
+const MapView = dynamic(() => import("@/component/LiveTracking/MapView"), { ssr: false });
 import RouteSidebar from "@/component/LiveTracking/RouteSidebar";
 import Stats from "@/component/stats/Stats";
 import TrackLayout from "@/component/track-layout/TrackLayout";

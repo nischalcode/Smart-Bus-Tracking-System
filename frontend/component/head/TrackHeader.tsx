@@ -88,28 +88,45 @@ const TrackHeader = ({ onMenuToggle }: Props) => {
           )}
         </button>
 
-        <div className="flex cursor-pointer items-center gap-3">
-          <div className="relative h-9 w-9 overflow-hidden rounded-full bg-gray-200">
-            <Image
-              src="/user.jpg"
-              alt="User"
-              width={36}
-              height={36}
-              className="rounded-full object-cover"
-            />
-          </div>
+        {user ? (
+          <div className="flex cursor-pointer items-center gap-3">
+            <div className="relative h-9 w-9 overflow-hidden rounded-full bg-gray-200">
+              {user.avatar ? (
+                <Image
+                  src={user.avatar}
+                  alt={user.name}
+                  width={36}
+                  height={36}
+                  className="rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-primary text-sm font-bold text-white">
+                  {user.name?.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
 
-          <div className="hidden text-sm sm:block">
-            <p>
-              <span className="text-gray-500">Hi, </span>
-              <span className="font-semibold text-gray-900">
-                {user?.name || "User"}
-              </span>
-            </p>
-          </div>
+            <div className="hidden text-sm sm:block">
+              <p>
+                <span className="text-gray-500">Hi, </span>
+                <span className="font-semibold text-gray-900">
+                  {user.name}
+                </span>
+              </p>
+            </div>
 
-          <ChevronDown className="hidden h-4 w-4 text-gray-500 sm:block" />
-        </div>
+            <ChevronDown className="hidden h-4 w-4 text-gray-500 sm:block" />
+          </div>
+        ) : (
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.push("/login")}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+            >
+              Sign In
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

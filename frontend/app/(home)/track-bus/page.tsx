@@ -2,8 +2,9 @@
 
 import { useState, useMemo } from "react";
 import BusSearchHeader from "@/component/head/BusSearchHeader";
-import MapView from "@/component/LiveTracking/MapView";
-import FullScreenMap from "@/component/LiveTracking/FullScreenMap";
+import dynamic from "next/dynamic";
+const MapView = dynamic(() => import("@/component/LiveTracking/MapView"), { ssr: false });
+const FullScreenMap = dynamic(() => import("@/component/LiveTracking/FullScreenMap"), { ssr: false });
 import RouteSidebar from "@/component/LiveTracking/RouteSidebar";
 import Stats from "@/component/stats/Stats";
 import TrackLayout from "@/component/track-layout/TrackLayout";

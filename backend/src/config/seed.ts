@@ -209,8 +209,8 @@ export const seedDatabase = async (): Promise<void> => {
       {
         bus: bus1._id,
         route: route12A._id,
-        latitude: route12A.pathCoordinates[0][0],
-        longitude: route12A.pathCoordinates[0][1],
+        latitude: route12A.pathCoordinates![0]![0] as number,
+        longitude: route12A.pathCoordinates![0]![1] as number,
         speed: 32,
         nextStop: "Green Street",
         eta: "2 min away",
@@ -220,8 +220,8 @@ export const seedDatabase = async (): Promise<void> => {
       {
         bus: bus2._id,
         route: route7B._id,
-        latitude: route7B.pathCoordinates[0][0],
-        longitude: route7B.pathCoordinates[0][1],
+        latitude: route7B.pathCoordinates![0]![0] as number,
+        longitude: route7B.pathCoordinates![0]![1] as number,
         speed: 28,
         nextStop: "River View",
         eta: "5 min away",
@@ -231,8 +231,8 @@ export const seedDatabase = async (): Promise<void> => {
       {
         bus: bus3._id,
         route: route9C._id,
-        latitude: route9C.pathCoordinates[0][0],
-        longitude: route9C.pathCoordinates[0][1],
+        latitude: route9C.pathCoordinates![0]![0] as number,
+        longitude: route9C.pathCoordinates![0]![1] as number,
         speed: 0,
         nextStop: "Lake Park",
         eta: "Delayed by 15 min due to heavy traffic",
@@ -242,15 +242,15 @@ export const seedDatabase = async (): Promise<void> => {
       {
         bus: bus4._id,
         route: route4D._id,
-        latitude: route4D.pathCoordinates[0][0],
-        longitude: route4D.pathCoordinates[0][1],
+        latitude: route4D.pathCoordinates![0]![0] as number,
+        longitude: route4D.pathCoordinates![0]![1] as number,
         speed: 35,
         nextStop: "Airport Road",
         eta: "4 min away",
         status: "Live",
         currentIndex: 0,
       },
-    ]);
+    ] as any);
 
     // 6. Seed Notifications
     await NotificationModel.create([
