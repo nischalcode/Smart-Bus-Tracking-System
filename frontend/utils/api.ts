@@ -3,7 +3,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9005/api";
 export async function fetchApi<T>(
   endpoint: string,
   options: RequestInit = {},
-  token?: string | null
+  token?: string | null,
 ): Promise<T> {
   const url = `${API_URL}${endpoint}`;
 
@@ -13,7 +13,7 @@ export async function fetchApi<T>(
   };
 
   if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+    headers.Authorization = `Bearer ${token}`;
   }
 
   const response = await fetch(url, {
@@ -86,10 +86,13 @@ export interface TrackingData {
   latitude: number;
   longitude: number;
   speed: number;
+  heading?: number;
   nextStop?: string;
+  nextStopEtaSeconds?: number;
   eta?: string;
   status: string;
   currentIndex: number;
+  updatedAt?: string;
 }
 
 export interface TrackingResponse {

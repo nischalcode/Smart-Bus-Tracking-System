@@ -1,61 +1,69 @@
 import TrackingModel from "./TrackingModel.js";
+import { getIO } from "../../socket/index.js";
+import { processTrackingSimulationStep, updateTrackingDocument } from "./TrackingService.js";
+import type { Coord } from "../../utils/geo.js";
 
 export const startTrackingSimulation = (): void => {
   console.log("Initializing GPS Live Tracking Simulator...");
 
+  const io = getIO();
+
   setInterval(async () => {
     try {
-      const trackingRecords = await TrackingModel.find({}).populate("route");
-
-      const bulkOps: any[] = [];
+      const trackingRecords = await TrackingModel.find({}).populate("route").populate("bus", "-password");
 
       for (const track of trackingRecords) {
-        const route = track.route as any;
-        if (!route || !route.pathCoordinates || route.pathCoordinates.length === 0) {
+        const populatedRoute = track.route as any;
+        const populatedBus = track.bus as any;
+        if (!populatedRoute || !Array.isArray(populatedRoute.pathCoordinates) || populatedRoute.pathCoordinates.length < 2) {
           continue;
         }
 
-        const path = route.pathCoordinates;
-        let nextIndex = (track.currentIndex || 0) + 1;
-        if (nextIndex >= path.length) {
-          nextIndex = 0;
-        }
+        const routePath = populatedRoute.pathCoordinates as unknown as Coord[];
+        const update = processTrackingSimulationStep(track, routePath);
+        if (!update) continue;
 
-        const [lat, lng] = path[nextIndex] as [number, number];
-        const speed = Math.floor(Math.random() * 25) + 20;
-        const stopsLeft = path.length - 1 - nextIndex;
-        const etaVal = stopsLeft * 3 + 2;
-        const eta = stopsLeft === 0 ? "Arriving" : `${etaVal} min away`;
+        const updated = await updateTrackingDocument(track._id.toString(), update);
+        if (!updated) continue;
 
-        let nextStop = "Terminal Stop";
-        if (route.stops && route.stops.length > 0) {
-          const stopIndex = Math.min(
-            Math.floor((nextIndex / path.length) * route.stops.length),
-            route.stops.length - 1
-          );
-          nextStop = route.stops[stopIndex]?.name || "Terminal Stop";
-        }
-
-        bulkOps.push({
-          updateOne: {
-            filter: { _id: track._id },
-            update: {
-              latitude: lat,
-              longitude: lng,
-              speed,
-              eta,
-              nextStop,
-              currentIndex: nextIndex,
-            },
-          },
-        });
-      }
-
-      if (bulkOps.length > 0) {
-        await TrackingModel.bulkWrite(bulkOps);
+        const payload = buildSocketPayload(updated, populatedBus, populatedRoute);
+        io.emit("bus:location:updated", payload);
       }
     } catch (error: any) {
       console.error("GPS Simulator Loop Error:", error.message);
     }
-  }, 10000);
+  }, 10_000);
 };
+
+function buildSocketPayload(updated: any, bus: any, route: any) {
+  return {
+    _id: updated._id.toString(),
+    bus: bus
+      ? {
+          _id: bus._id.toString(),
+          busNumber: bus.busNumber,
+          status: bus.status,
+        }
+      : updated.bus,
+    route: route
+      ? {
+          _id: route._id.toString(),
+          routeNo: route.routeNo,
+          from: route.from,
+          to: route.to,
+          pathCoordinates: route.pathCoordinates,
+          stops: route.stops,
+        }
+      : updated.route,
+    latitude: updated.latitude,
+    longitude: updated.longitude,
+    speed: updated.speed,
+    heading: updated.heading,
+    nextStop: updated.nextStop,
+    nextStopEtaSeconds: updated.nextStopEtaSeconds,
+    eta: updated.eta,
+    status: updated.status,
+    currentIndex: updated.currentIndex,
+    updatedAt: updated.updatedAt,
+  };
+}

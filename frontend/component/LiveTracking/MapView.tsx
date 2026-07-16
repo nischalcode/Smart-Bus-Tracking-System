@@ -1,30 +1,29 @@
 "use client";
 
-import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { LatLngExpression } from "leaflet";
+import type { LatLngBoundsLiteral, LatLngExpression } from "leaflet";
 import { Home, Minus, Plus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import {
   MapContainer,
   Marker,
-  Popup,
   Polyline,
+  Popup,
   TileLayer,
   useMap,
 } from "react-leaflet";
-import { useEffect, useRef, useState } from "react";
-import { fetchRoadRoute } from "@/utils/routing";
 import { initLeafletIcons } from "@/utils/leaflet";
+import { fetchRoadRoute } from "@/utils/routing";
 
 // ==========================
 // Fit Route
 // ==========================
-const FitBounds = ({ positions }: { positions: LatLngExpression[] }) => {
+const FitBounds = ({ positions }: { positions: LatLngBoundsLiteral }) => {
   const map = useMap();
 
   useEffect(() => {
     if (positions.length >= 2) {
-      map.fitBounds(positions as any, {
+      map.fitBounds(positions, {
         padding: [40, 40],
       });
     }
@@ -36,11 +35,7 @@ const FitBounds = ({ positions }: { positions: LatLngExpression[] }) => {
 // ==========================
 // Center On Bus
 // ==========================
-const CenterOnBus = ({
-  center,
-}: {
-  center: [number, number];
-}) => {
+const CenterOnBus = ({ center }: { center: [number, number] }) => {
   const map = useMap();
 
   useEffect(() => {
@@ -53,11 +48,7 @@ const CenterOnBus = ({
 // ==========================
 // Follow Device Location
 // ==========================
-const FollowDevice = ({
-  location,
-}: {
-  location: [number, number] | null;
-}) => {
+const FollowDevice = ({ location }: { location: [number, number] | null }) => {
   const map = useMap();
 
   useEffect(() => {
@@ -87,6 +78,7 @@ const ZoomControls = ({
   return (
     <div className="absolute bottom-6 right-6 z-[999] flex flex-col gap-2">
       <button
+        type="button"
         onClick={() => map.zoomIn()}
         className="rounded-lg bg-white p-2 shadow hover:bg-gray-100"
       >
@@ -94,6 +86,7 @@ const ZoomControls = ({
       </button>
 
       <button
+        type="button"
         onClick={() => map.zoomOut()}
         className="rounded-lg bg-white p-2 shadow hover:bg-gray-100"
       >
@@ -101,9 +94,8 @@ const ZoomControls = ({
       </button>
 
       <button
-        onClick={() =>
-          map.flyTo(deviceLocation ?? defaultCenter, 16)
-        }
+        type="button"
+        onClick={() => map.flyTo(deviceLocation ?? defaultCenter, 16)}
         className="rounded-lg bg-white p-2 shadow hover:bg-gray-100"
       >
         <Home size={18} />
@@ -119,8 +111,10 @@ interface MapViewProps {
   busName?: string;
   routeLabel?: string;
   eta?: string;
+  nextStopEta?: string;
   speed?: number;
   nextStop?: string;
+  status?: string;
   showBus?: boolean;
   fullScreen?: boolean;
 }
@@ -132,8 +126,10 @@ const MapView = ({
   busName = "Bus",
   routeLabel = "Route",
   eta = "N/A",
+  nextStopEta = "N/A",
   speed = 0,
   nextStop = "N/A",
+  status = "Live",
   showBus = false,
   fullScreen = false,
 }: MapViewProps) => {
@@ -141,11 +137,11 @@ const MapView = ({
     initLeafletIcons();
   }, []);
 
-  const [roadPath, setRoadPath] =
-    useState<LatLngExpression[] | null>(null);
+  const [roadPath, setRoadPath] = useState<LatLngExpression[] | null>(null);
 
-  const [deviceLocation, setDeviceLocation] =
-    useState<[number, number] | null>(null);
+  const [deviceLocation, setDeviceLocation] = useState<[number, number] | null>(
+    null,
+  );
 
   const watchId = useRef<number | null>(null);
 
@@ -172,7 +168,7 @@ const MapView = ({
         enableHighAccuracy: true,
         maximumAge: 0,
         timeout: 10000,
-      }
+      },
     );
 
     return () => {
@@ -195,9 +191,7 @@ const MapView = ({
 
     fetchRoadRoute(routeCoordinates).then((road) => {
       if (!cancelled && road) {
-        setRoadPath(
-          road.map((c) => [c[0], c[1]] as LatLngExpression)
-        );
+        setRoadPath(road.map((c) => [c[0], c[1]] as LatLngExpression));
       }
     });
 
@@ -208,14 +202,9 @@ const MapView = ({
 
   const routePolyline =
     roadPath ??
-    routeCoordinates.map(
-      (coord) =>
-        [coord[0], coord[1]] as LatLngExpression
-    );
+    routeCoordinates.map((coord) => [coord[0], coord[1]] as LatLngExpression);
 
-  const busKey = busPosition
-    ? `${busPosition[0]},${busPosition[1]}`
-    : "bus";
+  const busKey = busPosition ? `${busPosition[0]},${busPosition[1]}` : "bus";
 
   return (
     <div
@@ -241,7 +230,7 @@ const MapView = ({
         {showBus && busPosition ? (
           <CenterOnBus center={busPosition} />
         ) : routePolyline.length >= 2 ? (
-          <FitBounds positions={routePolyline} />
+          <FitBounds positions={routePolyline as LatLngBoundsLiteral} />
         ) : null}
 
         <ZoomControls deviceLocation={deviceLocation} />
@@ -256,20 +245,14 @@ const MapView = ({
           />
         )}
 
-        {routeCoordinates.map((stop, index) => (
-          <Marker
-            key={index}
-            position={stop}
-          >
-            <Popup>Stop {index + 1}</Popup>
+        {routeCoordinates.map((stop) => (
+          <Marker key={`${stop[0]}-${stop[1]}`} position={stop}>
+            <Popup>Stop on route</Popup>
           </Marker>
         ))}
 
         {showBus && busPosition && (
-          <Marker
-            key={busKey}
-            position={busPosition}
-          >
+          <Marker key={busKey} position={busPosition}>
             <Popup>
               <div>
                 <h3 className="font-bold">{busName}</h3>
@@ -288,13 +271,11 @@ const MapView = ({
                 <h3 className="font-semibold">📍 Your Current Location</h3>
 
                 <p>
-                  <strong>Latitude:</strong>{" "}
-                  {deviceLocation[0].toFixed(6)}
+                  <strong>Latitude:</strong> {deviceLocation[0].toFixed(6)}
                 </p>
 
                 <p>
-                  <strong>Longitude:</strong>{" "}
-                  {deviceLocation[1].toFixed(6)}
+                  <strong>Longitude:</strong> {deviceLocation[1].toFixed(6)}
                 </p>
               </div>
             </Popup>
@@ -302,34 +283,30 @@ const MapView = ({
         )}
       </MapContainer>
       {deviceLocation && (
-  <div className="absolute left-5 bottom-5 z-[999] w-72 rounded-xl bg-white p-4 shadow-xl border">
-    <div className="flex items-center justify-between">
-      <h2 className="font-bold text-lg">
-        📍 Current Device Location
-      </h2>
+        <div className="absolute left-5 bottom-5 z-[999] w-72 rounded-xl bg-white p-4 shadow-xl border">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold text-lg">📍 Current Device Location</h2>
 
-      <span className="text-green-600 font-semibold text-sm">
-        LIVE
-      </span>
-    </div>
+            <span className="text-green-600 font-semibold text-sm">LIVE</span>
+          </div>
 
-    <div className="mt-3 space-y-2 text-sm">
-      <div className="flex justify-between">
-        <span>Latitude</span>
-        <span className="font-medium">
-          {deviceLocation[0].toFixed(6)}
-        </span>
-      </div>
+          <div className="mt-3 space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span>Latitude</span>
+              <span className="font-medium">
+                {deviceLocation[0].toFixed(6)}
+              </span>
+            </div>
 
-      <div className="flex justify-between">
-        <span>Longitude</span>
-        <span className="font-medium">
-          {deviceLocation[1].toFixed(6)}
-        </span>
-      </div>
-    </div>
-  </div>
-)}
+            <div className="flex justify-between">
+              <span>Longitude</span>
+              <span className="font-medium">
+                {deviceLocation[1].toFixed(6)}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showBus && (
         <div className="absolute left-5 top-5 z-[999] w-64 rounded-xl bg-white p-4 shadow-xl">
@@ -342,24 +319,42 @@ const MapView = ({
             </span>
           </div>
 
-          <p className="mb-2 text-sm text-gray-500">
-            {routeLabel}
-          </p>
+          <p className="mb-2 text-sm text-gray-500">{routeLabel}</p>
 
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span>Next Stop</span>
-              <span>{nextStop}</span>
+              <span className="font-medium">{nextStop}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span>Next Stop ETA</span>
+              <span className="font-medium">{nextStopEta}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span>Final ETA</span>
+              <span className="font-medium">{eta}</span>
             </div>
 
             <div className="flex justify-between">
               <span>Status</span>
-              <span>{eta}</span>
+              <span
+                className={`font-medium ${
+                  status === "Delayed"
+                    ? "text-red-600"
+                    : status === "Stopped"
+                      ? "text-amber-600"
+                      : "text-green-600"
+                }`}
+              >
+                {status}
+              </span>
             </div>
 
             <div className="flex justify-between">
               <span>Speed</span>
-              <span>{speed} km/h</span>
+              <span className="font-medium">{speed} km/h</span>
             </div>
           </div>
         </div>

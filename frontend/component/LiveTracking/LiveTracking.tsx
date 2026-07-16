@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
-import RouteSidebar from "./RouteSidebar";
+import { useMemo, useState } from "react";
 import { useLiveTracking } from "@/hooks/useLiveTracking";
+import { formatDuration } from "@/utils/format";
+import RouteSidebar from "./RouteSidebar";
 
 const MapView = dynamic(() => import("./MapView"), {
   ssr: false,
@@ -40,8 +41,8 @@ const LiveTracking = () => {
   const mapCenter: [number, number] | undefined = activeTracking
     ? [activeTracking.latitude, activeTracking.longitude]
     : activeRouteCoords.length > 0
-    ? activeRouteCoords[0]
-    : undefined;
+      ? activeRouteCoords[0]
+      : undefined;
 
   return (
     <section className="bg-gray-50 py-12">
@@ -49,7 +50,9 @@ const LiveTracking = () => {
         <div className="flex flex-col gap-8 lg:flex-row">
           {loadingRoutes ? (
             <div className="flex h-[600px] w-full items-center justify-center rounded-2xl bg-white shadow-md lg:w-1/3 animate-pulse">
-              <span className="text-gray-500 font-medium">Loading Routes...</span>
+              <span className="text-gray-500 font-medium">
+                Loading Routes...
+              </span>
             </div>
           ) : (
             <RouteSidebar
@@ -78,7 +81,9 @@ const LiveTracking = () => {
             busName={activeTracking?.bus?.busNumber || "Bus"}
             speed={activeTracking?.speed}
             eta={activeTracking?.eta}
+            nextStopEta={formatDuration(activeTracking?.nextStopEtaSeconds)}
             nextStop={activeTracking?.nextStop}
+            status={activeTracking?.status}
           />
         </div>
       </div>

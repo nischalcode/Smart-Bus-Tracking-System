@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { io, type Socket } from "socket.io-client";
 import {
   fetchApi,
-  RoutesResponse,
-  RouteData,
-  TrackingResponse,
-  TrackingData,
+  type RouteData,
+  type RoutesResponse,
+  type TrackingData,
+  type TrackingResponse,
 } from "@/utils/api";
 
-const POLL_INTERVAL_MS = 5000;
+const SOCKET_BASE =
+  process.env.NEXT_PUBLIC_SOCKET_URL ||
+  (process.env.NEXT_PUBLIC_API_URL?.replace(/\/api$/, "") ??
+    "http://localhost:9005");
 
 export function useLiveTracking() {
   const [routes, setRoutes] = useState<RouteData[]>([]);
@@ -17,6 +21,7 @@ export function useLiveTracking() {
   const [loadingRoutes, setLoadingRoutes] = useState(true);
   const [loadingTracking, setLoadingTracking] = useState(true);
 
+  // Load routes once
   useEffect(() => {
     fetchApi<RoutesResponse>("/routes")
       .then((data) => {
@@ -26,27 +31,53 @@ export function useLiveTracking() {
       .finally(() => setLoadingRoutes(false));
   }, []);
 
+  // Load initial tracking and open socket
   useEffect(() => {
     let mounted = true;
+    let socket: Socket | null = null;
 
-    const fetchTracking = () => {
-      fetchApi<TrackingResponse>("/tracking")
-        .then((data) => {
-          if (!mounted) return;
-          if (data.success && data.tracking) setTracking(data.tracking);
-        })
-        .catch((err) => console.error("Failed to load tracking:", err))
-        .finally(() => {
-          if (mounted) setLoadingTracking(false);
-        });
+    const updateTrackingEntry = (incoming: TrackingData) => {
+      setTracking((prev) => {
+        const existingIndex = prev.findIndex((t) => t._id === incoming._id);
+        if (existingIndex >= 0) {
+          const next = [...prev];
+          next[existingIndex] = incoming;
+          return next;
+        }
+        return [...prev, incoming];
+      });
     };
 
-    fetchTracking();
-    const id = setInterval(fetchTracking, POLL_INTERVAL_MS);
+    fetchApi<TrackingResponse>("/tracking")
+      .then((data) => {
+        if (!mounted) return;
+        if (data.success && data.tracking) setTracking(data.tracking);
+      })
+      .catch((err) => console.error("Failed to load tracking:", err))
+      .finally(() => {
+        if (mounted) setLoadingTracking(false);
+      });
+
+    socket = io(SOCKET_BASE, { transports: ["websocket", "polling"] });
+
+    socket.on("connect", () => {
+      console.log("Live tracking socket connected");
+    });
+
+    socket.on("bus:location:updated", (data: unknown) => {
+      if (!mounted || !data || typeof data !== "object") return;
+      updateTrackingEntry(data as TrackingData);
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("Live tracking socket error:", err.message);
+    });
 
     return () => {
       mounted = false;
-      clearInterval(id);
+      if (socket) {
+        socket.disconnect();
+      }
     };
   }, []);
 

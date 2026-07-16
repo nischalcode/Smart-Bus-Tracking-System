@@ -1,20 +1,27 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import BusSearchHeader from "@/component/head/BusSearchHeader";
 import dynamic from "next/dynamic";
-const MapView = dynamic(() => import("@/component/LiveTracking/MapView"), { ssr: false });
-const FullScreenMap = dynamic(() => import("@/component/LiveTracking/FullScreenMap"), { ssr: false });
+import { useMemo, useState } from "react";
+import BusSearchHeader from "@/component/head/BusSearchHeader";
 import RouteSidebar from "@/component/LiveTracking/RouteSidebar";
 import Stats from "@/component/stats/Stats";
 import TrackLayout from "@/component/track-layout/TrackLayout";
 import { useLiveTracking } from "@/hooks/useLiveTracking";
+import { formatDuration } from "@/utils/format";
+
+const MapView = dynamic(() => import("@/component/LiveTracking/MapView"), {
+  ssr: false,
+});
+const FullScreenMap = dynamic(
+  () => import("@/component/LiveTracking/FullScreenMap"),
+  { ssr: false },
+);
 
 export default function Page() {
   const { routes, loadingRoutes, trackingByRouteId } = useLiveTracking();
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRouteFilter, setSelectedRouteFilter] = useState("All Routes");
+  const [_selectedRouteFilter, setSelectedRouteFilter] = useState("All Routes");
   const [showFullScreen, setShowFullScreen] = useState(false);
 
   const activeRoute = routes[selectedIndex];
@@ -26,8 +33,8 @@ export default function Page() {
   const mapCenter: [number, number] | undefined = activeTracking
     ? [activeTracking.latitude, activeTracking.longitude]
     : activeRouteCoords.length > 0
-    ? activeRouteCoords[0]
-    : undefined;
+      ? activeRouteCoords[0]
+      : undefined;
 
   const sidebarRoutes = useMemo(() => {
     return routes.map((r, idx) => {
@@ -56,7 +63,7 @@ export default function Page() {
     setSelectedRouteFilter(route);
     if (route !== "All Routes") {
       const idx = routes.findIndex(
-        (r) => r.routeNo === route || `${r.from} → ${r.to}` === route
+        (r) => r.routeNo === route || `${r.from} → ${r.to}` === route,
       );
       if (idx >= 0) setSelectedIndex(idx);
     }
@@ -101,7 +108,9 @@ export default function Page() {
           busName={activeTracking?.bus?.busNumber || "Bus"}
           speed={activeTracking?.speed}
           eta={activeTracking?.eta}
+          nextStopEta={formatDuration(activeTracking?.nextStopEtaSeconds)}
           nextStop={activeTracking?.nextStop}
+          status={activeTracking?.status}
         />
       </div>
 
