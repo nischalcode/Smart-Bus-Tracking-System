@@ -20,6 +20,22 @@ const routeSchema = new Schema(
     pathCoordinates: {
       type: [[Number]], // Array of [lat, lng] arrays
       required: true,
+      validate: {
+        validator: function (coords: unknown) {
+          if (!Array.isArray(coords) || coords.length < 2) return false;
+          return coords.every((coord) => {
+            if (!Array.isArray(coord) || coord.length < 2) return false;
+            const [lat, lng] = coord;
+            return (
+              typeof lat === "number" &&
+              typeof lng === "number" &&
+              Math.abs(lat) <= 90 &&
+              Math.abs(lng) <= 180
+            );
+          });
+        },
+        message: "pathCoordinates must contain at least 2 valid [lat, lng] pairs",
+      },
     },
   },
   { timestamps: true }

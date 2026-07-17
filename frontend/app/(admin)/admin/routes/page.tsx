@@ -1,18 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, Check, X } from "lucide-react";
-import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Check, Plus, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
-import { useAuth } from "@/context/AuthContext";
-import { fetchApi, RouteData, RouteResponse } from "@/utils/api";
-import DataTable, { Column } from "@/component/ui/DataTable";
-import PageHeader from "@/component/ui/PageHeader";
-import Modal from "@/component/ui/Modal";
+import RouteMapPicker from "@/component/admin/RouteMapPicker";
 import ConfirmDialog from "@/component/ui/ConfirmDialog";
+import DataTable, { type Column } from "@/component/ui/DataTable";
 import LoadingSpinner from "@/component/ui/LoadingSpinner";
-import RouteMapPicker from "@/component/admin/RouteMapPicker"
+import Modal from "@/component/ui/Modal";
+import PageHeader from "@/component/ui/PageHeader";
+import { useAuth } from "@/context/AuthContext";
+import { fetchApi, type RouteData, type RouteResponse } from "@/utils/api";
 
 const routeSchema = z.object({
   routeNo: z.string().min(1, "Route number is required"),
@@ -22,7 +23,6 @@ const routeSchema = z.object({
   frequency: z.string().min(1, "Frequency is required"),
   status: z.string(),
   active: z.boolean(),
-  pathCoordinatesText: z.string().optional(),
 });
 
 type RouteFormData = z.infer<typeof routeSchema>;
@@ -36,6 +36,8 @@ export default function RoutesPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingRoute, setDeletingRoute] = useState<RouteData | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [coordinates, setCoordinates] = useState<[number, number][]>([]);
+  const [coordinateError, setCoordinateError] = useState<string | null>(null);
 
   const {
     register,
@@ -45,32 +47,52 @@ export default function RoutesPage() {
     formState: { errors },
   } = useForm<RouteFormData>({
     resolver: zodResolver(routeSchema),
-    defaultValues: { status: "On Time", active: true, pathCoordinatesText: "" },
+    defaultValues: { status: "On Time", active: true },
   });
 
-  const fetchRoutes = () => {
+  const fetchRoutes = useCallback(() => {
     fetchApi<{ success: boolean; routes: RouteData[] }>(
       "/routes",
       {},
-      token ?? undefined
+      token ?? undefined,
     )
       .then((res) => setRoutes(res.routes))
       .catch(console.error)
       .finally(() => setLoading(false));
-  };
+  }, [token]);
 
   useEffect(() => {
     fetchRoutes();
-  }, [token]);
+  }, [fetchRoutes]);
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingRoute(null);
+    setCoordinates([]);
+    setCoordinateError(null);
+    reset();
+  };
 
   const openCreate = () => {
     setEditingRoute(null);
-    reset({ routeNo: "", from: "", to: "", via: "", frequency: "", status: "On Time", active: true, pathCoordinatesText: "" });
+    setCoordinates([]);
+    setCoordinateError(null);
+    reset({
+      routeNo: "",
+      from: "",
+      to: "",
+      via: "",
+      frequency: "",
+      status: "On Time",
+      active: true,
+    });
     setShowModal(true);
   };
 
   const openEdit = (route: RouteData) => {
     setEditingRoute(route);
+    setCoordinates(route.pathCoordinates ?? []);
+    setCoordinateError(null);
     reset({
       routeNo: route.routeNo,
       from: route.from,
@@ -79,19 +101,31 @@ export default function RoutesPage() {
       frequency: route.frequency,
       status: route.status ?? "On Time",
       active: route.active,
-      pathCoordinatesText: route.pathCoordinates?.length
-        ? JSON.stringify(route.pathCoordinates)
-        : "",
     });
     setShowModal(true);
   };
 
   const onSubmit = async (data: RouteFormData) => {
     if (coordinates.length < 2) {
-      alert("Please select at least 2 points on the map.");
+      setCoordinateError("Please select at least 2 points on the map.");
       return;
     }
 
+    const invalidIndex = coordinates.findIndex(
+      (coord) =>
+        !Array.isArray(coord) ||
+        coord.length < 2 ||
+        typeof coord[0] !== "number" ||
+        typeof coord[1] !== "number" ||
+        Math.abs(coord[0]) > 90 ||
+        Math.abs(coord[1]) > 180,
+    );
+    if (invalidIndex !== -1) {
+      setCoordinateError(`Invalid coordinate at index ${invalidIndex}.`);
+      return;
+    }
+
+    setCoordinateError(null);
     setSubmitting(true);
 
     try {
@@ -103,12 +137,8 @@ export default function RoutesPage() {
         frequency: data.frequency,
         status: data.status,
         active: data.active,
-
-        // send coordinates directly from RouteMapPicker state
         pathCoordinates: coordinates,
       };
-
-      console.log(payload);
 
       if (editingRoute) {
         await fetchApi<RouteResponse>(
@@ -117,7 +147,7 @@ export default function RoutesPage() {
             method: "PUT",
             body: JSON.stringify(payload),
           },
-          token ?? undefined
+          token ?? undefined,
         );
       } else {
         await fetchApi<RouteResponse>(
@@ -126,18 +156,17 @@ export default function RoutesPage() {
             method: "POST",
             body: JSON.stringify(payload),
           },
-          token ?? undefined
+          token ?? undefined,
         );
       }
 
-      setShowModal(false);
-
-      reset();
-
-      setCoordinates([]);
-
+      closeModal();
       fetchRoutes();
+      toast.success(editingRoute ? "Route updated" : "Route created");
     } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to save route";
+      toast.error(message);
       console.error(err);
     } finally {
       setSubmitting(false);
@@ -155,12 +184,16 @@ export default function RoutesPage() {
       await fetchApi(
         `/routes/${deletingRoute._id}`,
         { method: "DELETE" },
-        token ?? undefined
+        token ?? undefined,
       );
       setShowDeleteConfirm(false);
       setDeletingRoute(null);
       fetchRoutes();
+      toast.success("Route deleted");
     } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to delete route";
+      toast.error(message);
       console.error(err);
     }
   };
@@ -202,8 +235,6 @@ export default function RoutesPage() {
     },
   ];
 
-  const [coordinates, setCoordinates] = useState<[number, number][]>([]);
-  
   if (loading) return <LoadingSpinner size="lg" />;
 
   return (
@@ -213,6 +244,7 @@ export default function RoutesPage() {
         description="Manage bus routes"
         action={
           <button
+            type="button"
             onClick={openCreate}
             className="inline-flex items-center gap-2 rounded-lg bg-[#22a34a] px-4 py-2 text-sm font-medium text-white hover:bg-[#1c8a3e]"
           >
@@ -231,57 +263,79 @@ export default function RoutesPage() {
 
       <Modal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={closeModal}
         title={editingRoute ? "Edit Route" : "Add Route"}
         size="lg"
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor="routeNo"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
                 Route No
               </label>
               <input
+                id="routeNo"
                 {...register("routeNo")}
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
               />
               {errors.routeNo && (
-                <p className="mt-1 text-xs text-red-500">{errors.routeNo.message}</p>
+                <p className="mt-1 text-xs text-red-500">
+                  {errors.routeNo.message}
+                </p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor="frequency"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
                 Frequency
               </label>
               <input
+                id="frequency"
                 {...register("frequency")}
                 placeholder="e.g. every 15 min"
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
               />
               {errors.frequency && (
-                <p className="mt-1 text-xs text-red-500">{errors.frequency.message}</p>
+                <p className="mt-1 text-xs text-red-500">
+                  {errors.frequency.message}
+                </p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor="from"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
                 From
               </label>
               <input
+                id="from"
                 {...register("from")}
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
               />
               {errors.from && (
-                <p className="mt-1 text-xs text-red-500">{errors.from.message}</p>
+                <p className="mt-1 text-xs text-red-500">
+                  {errors.from.message}
+                </p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor="to"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
                 To
               </label>
               <input
+                id="to"
                 {...register("to")}
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
               />
@@ -291,20 +345,28 @@ export default function RoutesPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor="via"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
                 Via
               </label>
               <input
+                id="via"
                 {...register("via")}
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor="status"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
                 Status
               </label>
               <input
+                id="status"
                 {...register("status")}
                 placeholder="On Time"
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
@@ -313,15 +375,20 @@ export default function RoutesPage() {
           </div>
 
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label
+              htmlFor="active"
+              className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
               <Controller
                 control={control}
                 name="active"
                 render={({ field }) => (
                   <input
+                    id="active"
                     type="checkbox"
                     checked={field.value}
                     onChange={field.onChange}
+                    ref={field.ref}
                     className="h-4 w-4 rounded border-gray-300 text-[#22a34a] focus:ring-[#22a34a]"
                   />
                 )}
@@ -331,25 +398,19 @@ export default function RoutesPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <p className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Path Coordinates
-            </label>
-            {/* <textarea
-              {...register("pathCoordinatesText")}
-              rows={3}
-              placeholder='JSON array, e.g. [[12.97,77.59],[12.98,77.60]]'
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-xs focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-            /> */}
-            <RouteMapPicker
-                value={coordinates}
-                onChange={setCoordinates}
-            />
+            </p>
+            <RouteMapPicker value={coordinates} onChange={setCoordinates} />
+            {coordinateError && (
+              <p className="mt-1 text-xs text-red-500">{coordinateError}</p>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
-              onClick={() => setShowModal(false)}
+              onClick={closeModal}
               className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
             >
               Cancel
