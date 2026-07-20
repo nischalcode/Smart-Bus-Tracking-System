@@ -1,4 +1,5 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9005/api";
+// const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9005/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://sbts-backend.onrender.com/api";
 
 export async function fetchApi<T>(
   endpoint: string,

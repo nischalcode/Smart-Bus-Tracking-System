@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import UserModel from "../users/UserModel.js";
 import { AuthenticatedRequest } from "../../middleware/AuthMiddleware.js";
+import { UserRole } from "../../types/UserRole.js";
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 if (!JWT_SECRET) {
@@ -26,7 +27,7 @@ export class AuthController {
         name,
         email,
         password: hashedPassword,
-        role: "passenger",
+        role: UserRole.PASSENGER,
       });
 
       const token = jwt.sign(

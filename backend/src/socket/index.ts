@@ -1,28 +1,23 @@
 import { Server } from "socket.io";
-import type { Server as HttpServer } from "http";
-import { registerLocationSocket } from "./location.socket.js";
+import http from "http";
 
 let io: Server;
 
-export const initializeSocket = (server: HttpServer) => {
+export const initializeSocket = (server: http.Server) => {
   io = new Server(server, {
     cors: {
       origin: "http://localhost:3000",
-      credentials: true,
+      methods: ["GET", "POST"],
     },
   });
 
   io.on("connection", (socket) => {
-    console.log(`✅ Socket Connected: ${socket.id}`);
-
-     registerLocationSocket(io, socket);
+    console.log("Client connected:", socket.id);
 
     socket.on("disconnect", () => {
-      console.log(`❌ Socket Disconnected: ${socket.id}`);
+      console.log("Client disconnected:", socket.id);
     });
   });
-
-  return io;
 };
 
 export const getIO = () => io;

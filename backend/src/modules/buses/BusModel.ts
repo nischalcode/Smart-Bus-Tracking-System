@@ -13,12 +13,34 @@ const busSchema = new Schema(
     },
     modelName: { type: String },
     capacity: { type: Number },
+    // status: {
+    //   type: String,
+    //   enum: ["Active", "Maintenance", "Inactive"],
+    //   default: "Active",
+    // },
+    driver: { type: Schema.Types.ObjectId, ref: "User" },
+    assignedDriver: {
+      type: Schema.Types.ObjectId,
+      ref: "Driver",
+      default: null,
+    },
+
+    assignedRoute: {
+      type: Schema.Types.ObjectId,
+      ref: "Route",
+      default: null,
+    },
+
     status: {
       type: String,
-      enum: ["Active", "Maintenance", "Inactive"],
-      default: "Active",
+      enum: [
+        "active",
+        "inactive",
+        "maintenance",
+        "offline"
+      ],
+      default: "inactive",
     },
-    driver: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
 );

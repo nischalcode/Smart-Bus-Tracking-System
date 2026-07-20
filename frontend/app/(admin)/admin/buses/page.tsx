@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Plus, Bus as BusIcon, CheckCircle2, Wrench, PauseCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,6 +12,8 @@ import PageHeader from "@/component/ui/PageHeader";
 import Modal from "@/component/ui/Modal";
 import ConfirmDialog from "@/component/ui/ConfirmDialog";
 import LoadingSpinner from "@/component/ui/LoadingSpinner";
+import StatsCard from "@/component/ui/StatsCard";
+import StatusBadge from "@/component/ui/StatusBadge";
 
 const busSchema = z.object({
   busNumber: z.string().min(1, "Bus number is required"),
@@ -22,6 +24,35 @@ const busSchema = z.object({
 
 type BusFormData = z.infer<typeof busSchema>;
 
+const statusFilters = ["All", "Active", "Maintenance", "Inactive"] as const;
+
+function statusTone(status: string) {
+  if (status === "Active") return "success" as const;
+  if (status === "Maintenance") return "warning" as const;
+  return "neutral" as const;
+}
+
+function toCsv(rows: BusData[]) {
+  const header = ["Bus Number", "Model", "Capacity", "Status"];
+  const lines = rows.map((b) =>
+    [b.busNumber, b.modelName ?? "", b.capacity ?? "", b.status]
+      .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+      .join(",")
+  );
+  return [header.join(","), ...lines].join("\n");
+}
+
+function downloadCsv(rows: BusData[]) {
+  const csv = toCsv(rows);
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "buses.csv";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function BusesPage() {
   const { token } = useAuth();
   const [buses, setBuses] = useState<BusData[]>([]);
@@ -31,6 +62,7 @@ export default function BusesPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingBus, setDeletingBus] = useState<BusData | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<(typeof statusFilters)[number]>("All");
 
   const {
     register,
@@ -51,6 +83,7 @@ export default function BusesPage() {
 
   useEffect(() => {
     fetchBuses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const openCreate = () => {
@@ -104,11 +137,7 @@ export default function BusesPage() {
   const handleDelete = async () => {
     if (!deletingBus) return;
     try {
-      await fetchApi(
-        `/buses/${deletingBus._id}`,
-        { method: "DELETE" },
-        token ?? undefined
-      );
+      await fetchApi(`/buses/${deletingBus._id}`, { method: "DELETE" }, token ?? undefined);
       setShowDeleteConfirm(false);
       setDeletingBus(null);
       fetchBuses();
@@ -117,26 +146,61 @@ export default function BusesPage() {
     }
   };
 
+  const summary = useMemo(() => {
+    const active = buses.filter((b) => b.status === "Active").length;
+    const maintenance = buses.filter((b) => b.status === "Maintenance").length;
+    const inactive = buses.filter((b) => b.status === "Inactive").length;
+    const avgCapacity =
+      buses.length > 0
+        ? Math.round(
+            buses.reduce((sum, b) => sum + (b.capacity || 0), 0) / buses.length
+          )
+        : 0;
+    return { active, maintenance, inactive, avgCapacity };
+  }, [buses]);
+
+  const filteredBuses = useMemo(
+    () => (statusFilter === "All" ? buses : buses.filter((b) => b.status === statusFilter)),
+    [buses, statusFilter]
+  );
+
   const columns: Column<BusData & Record<string, unknown>>[] = [
-    { key: "busNumber", label: "Bus Number", searchable: true },
-    { key: "modelName", label: "Model", render: (item) => (item as unknown as BusData).modelName ?? "-" },
-    { key: "capacity", label: "Capacity", render: (item) => String((item as unknown as BusData).capacity ?? "-") },
+    {
+      key: "busNumber",
+      label: "Bus Number",
+      searchable: true,
+      render: (item) => {
+        const bus = item as unknown as BusData;
+        return (
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <BusIcon className="h-4 w-4" />
+            </div>
+            <span className="font-semibold text-foreground">{bus.busNumber}</span>
+          </div>
+        );
+      },
+    },
+    {
+      key: "modelName",
+      label: "Model",
+      searchable: true,
+      render: (item) => (item as unknown as BusData).modelName ?? "—",
+    },
+    {
+      key: "capacity",
+      label: "Capacity",
+      render: (item) => {
+        const cap = (item as unknown as BusData).capacity;
+        return cap ? `${cap} seats` : "—";
+      },
+    },
     {
       key: "status",
       label: "Status",
       render: (item) => {
         const bus = item as unknown as BusData;
-        const color =
-          bus.status === "Active"
-            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-            : bus.status === "Maintenance"
-              ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-              : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
-        return (
-          <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${color}`}>
-            {bus.status}
-          </span>
-        );
+        return <StatusBadge label={bus.status} tone={statusTone(bus.status)} pulse={bus.status === "Active"} />;
       },
     },
   ];
@@ -146,12 +210,13 @@ export default function BusesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow="Fleet Management"
         title="Buses"
-        description="Manage your fleet of buses"
+        description="Manage every vehicle in your fleet — status, capacity and assignment."
         action={
           <button
             onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#22a34a] px-4 py-2 text-sm font-medium text-white hover:bg-[#1c8a3e]"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:brightness-110"
           >
             <Plus className="h-4 w-4" />
             Add Bus
@@ -159,11 +224,45 @@ export default function BusesPage() {
         }
       />
 
+      {/* Bento summary cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatsCard icon={BusIcon} label="Total Buses" value={buses.length} tone="primary" />
+        <StatsCard icon={CheckCircle2} label="Active" value={summary.active} tone="accent" />
+        <StatsCard icon={Wrench} label="In Maintenance" value={summary.maintenance} tone="warning" />
+        <StatsCard
+          icon={PauseCircle}
+          label="Inactive"
+          value={summary.inactive}
+          tone="neutral"
+          subtitle={`avg. ${summary.avgCapacity} seats/bus`}
+        />
+      </div>
+
       <DataTable
-        data={buses as unknown as (BusData & Record<string, unknown>)[]}
+        data={filteredBuses as unknown as (BusData & Record<string, unknown>)[]}
         columns={columns}
         onEdit={(item) => openEdit(item as unknown as BusData)}
         onDelete={(item) => confirmDelete(item as unknown as BusData)}
+        onExport={(rows) => downloadCsv(rows as unknown as BusData[])}
+        searchPlaceholder="Search by bus number or model..."
+        emptyMessage="No buses match this filter yet."
+        filters={
+          <div className="flex flex-wrap gap-1.5">
+            {statusFilters.map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  statusFilter === s
+                    ? "bg-primary text-primary-foreground"
+                    : "border border-border text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        }
       />
 
       <Modal
@@ -173,49 +272,41 @@ export default function BusesPage() {
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Bus Number
-            </label>
+            <label className="block text-sm font-medium text-foreground">Bus Number</label>
             <input
               {...register("busNumber")}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
             />
             {errors.busNumber && (
-              <p className="mt-1 text-xs text-red-500">{errors.busNumber.message}</p>
+              <p className="mt-1 text-xs text-danger">{errors.busNumber.message}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Model
-            </label>
+            <label className="block text-sm font-medium text-foreground">Model</label>
             <input
               {...register("modelName")}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Capacity
-            </label>
+            <label className="block text-sm font-medium text-foreground">Capacity</label>
             <input
               type="number"
               {...register("capacity", { valueAsNumber: true })}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
             />
             {errors.capacity && (
-              <p className="mt-1 text-xs text-red-500">{errors.capacity.message}</p>
+              <p className="mt-1 text-xs text-danger">{errors.capacity.message}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Status
-            </label>
+            <label className="block text-sm font-medium text-foreground">Status</label>
             <select
               {...register("status")}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
             >
               <option value="Active">Active</option>
               <option value="Maintenance">Maintenance</option>
@@ -227,14 +318,14 @@ export default function BusesPage() {
             <button
               type="button"
               onClick={() => setShowModal(false)}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-lg bg-[#22a34a] px-4 py-2 text-sm font-medium text-white hover:bg-[#1c8a3e] disabled:opacity-50"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:brightness-110 disabled:opacity-50"
             >
               {submitting ? "Saving..." : editingBus ? "Update" : "Create"}
             </button>

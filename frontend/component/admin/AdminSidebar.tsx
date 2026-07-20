@@ -15,6 +15,7 @@ import {
   UsersRound,
   LogOut,
   X,
+  ChevronRight,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -23,9 +24,9 @@ const menuItems = [
   { title: "Buses", href: "/admin/buses", icon: Bus },
   { title: "Routes", href: "/admin/routes", icon: Route },
   { title: "Schedules", href: "/admin/schedules", icon: Calendar },
+  { title: "Tracking", href: "/admin/tracking", icon: MapPin },
   { title: "Notifications", href: "/admin/notifications", icon: Bell },
   { title: "Users", href: "/admin/users", icon: Users },
-  { title: "Tracking", href: "/admin/tracking", icon: MapPin },
   { title: "Banners", href: "/admin/banners", icon: ImageIcon },
   { title: "Team", href: "/admin/team", icon: UsersRound },
 ];
@@ -43,45 +44,52 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
     <>
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
           onClick={onClose}
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out dark:border-gray-700 dark:bg-gray-900 lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar text-sidebar-foreground transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-16 items-center justify-between border-b border-gray-200 px-6 dark:border-gray-700">
-          <Link href="/admin" className="flex items-center gap-3" onClick={onClose}>
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
+        {/* Faint route-stitch accent along the right edge */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-px route-stitch [background-size:1px_14px] [background-repeat:repeat-y]" />
+
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border px-5">
+          <Link href="/admin" className="flex items-center gap-2.5" onClick={onClose}>
+            <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-primary-strong">
               <Image
                 src="/Logo.png"
-                alt="logo"
-                width={24}
-                height={24}
+                alt="SmartBus"
+                width={20}
+                height={20}
                 className="h-5 w-5"
               />
+              <span className="live-dot absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-accent" />
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900 dark:text-white">
+            <div className="leading-tight">
+              <h1 className="text-[15px] font-bold tracking-tight text-white">
                 SmartBus
               </h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Admin Panel
+              <p className="text-[11px] font-medium text-sidebar-muted">
+                Fleet Control
               </p>
             </div>
           </Link>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-muted hover:bg-white/5 lg:hidden"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <nav className="mt-4 space-y-1 px-3">
+        <nav className="scrollbar-thin flex-1 space-y-1 overflow-y-auto px-3 py-4">
+          <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted">
+            Operations
+          </p>
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive =
@@ -94,35 +102,45 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                 key={item.title}
                 href={item.href}
                 onClick={onClose}
-                className={`flex items-center gap-3 rounded-lg border-l-4 px-3 py-2.5 text-sm font-medium transition-colors ${
+                className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
                   isActive
-                    ? "border-primary bg-green-50 text-primary dark:bg-green-950"
-                    : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
+                    ? "bg-sidebar-active text-white"
+                    : "text-sidebar-muted hover:bg-white/5 hover:text-white"
                 }`}
               >
-                <Icon className="h-5 w-5" />
-                {item.title}
+                {isActive && (
+                  <span className="absolute left-0 h-5 w-1 -translate-x-3 rounded-full bg-accent" />
+                )}
+                <Icon
+                  className={`h-[18px] w-[18px] shrink-0 ${
+                    isActive ? "text-accent" : ""
+                  }`}
+                />
+                <span className="flex-1">{item.title}</span>
+                {isActive && (
+                  <ChevronRight className="h-3.5 w-3.5 text-accent" />
+                )}
               </Link>
             );
           })}
         </nav>
 
-        <div className="mt-auto border-t border-gray-200 p-4 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+        <div className="border-t border-sidebar-border p-3">
+          <div className="flex items-center gap-3 rounded-xl px-2 py-2">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/15 text-sm font-semibold text-accent">
               {user?.name?.charAt(0).toUpperCase() || "A"}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
+              <p className="truncate text-sm font-semibold text-white">
                 {user?.name || "Admin"}
               </p>
-              <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+              <p className="truncate text-xs text-sidebar-muted">
                 {user?.email || "admin@smartbus.com"}
               </p>
             </div>
             <button
               onClick={logout}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-950 dark:hover:text-red-400"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sidebar-muted transition-colors hover:bg-danger/15 hover:text-danger"
               title="Logout"
             >
               <LogOut className="h-4 w-4" />

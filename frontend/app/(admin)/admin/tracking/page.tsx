@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Plus, Radio, Gauge, TrendingUp, AlertTriangle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -19,6 +19,10 @@ import PageHeader from "@/component/ui/PageHeader";
 import Modal from "@/component/ui/Modal";
 import ConfirmDialog from "@/component/ui/ConfirmDialog";
 import LoadingSpinner from "@/component/ui/LoadingSpinner";
+import StatsCard from "@/component/ui/StatsCard";
+import StatusBadge from "@/component/ui/StatusBadge";
+import MapView from "@/component/LiveTracking/MapView";
+import TrackingSidebar from "@/component/admin/TrackingSidebar";
 
 const trackingSchema = z.object({
   bus: z.string().min(1, "Bus is required"),
@@ -37,6 +41,7 @@ export default function TrackingPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingTracking, setDeletingTracking] = useState<TrackingData | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const {
     register,
@@ -57,6 +62,7 @@ export default function TrackingPage() {
       setTracking(trackRes.tracking);
       setBuses(busRes.buses);
       setRoutes(routeRes.routes);
+      setSelectedId((prev) => prev ?? trackRes.tracking[0]?._id ?? null);
     } catch (err) {
       console.error(err);
     } finally {
@@ -66,6 +72,9 @@ export default function TrackingPage() {
 
   useEffect(() => {
     fetchAll();
+    const id = setInterval(fetchAll, 5000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const openCreate = () => {
@@ -99,11 +108,7 @@ export default function TrackingPage() {
   const handleDelete = async () => {
     if (!deletingTracking) return;
     try {
-      await fetchApi(
-        `/tracking/${deletingTracking._id}`,
-        { method: "DELETE" },
-        token ?? undefined
-      );
+      await fetchApi(`/tracking/${deletingTracking._id}`, { method: "DELETE" }, token ?? undefined);
       setShowDeleteConfirm(false);
       setDeletingTracking(null);
       fetchAll();
@@ -111,6 +116,23 @@ export default function TrackingPage() {
       console.error(err);
     }
   };
+
+  const summary = useMemo(() => {
+    const avgSpeed =
+      tracking.length > 0
+        ? Math.round(tracking.reduce((sum, t) => sum + (t.speed || 0), 0) / tracking.length)
+        : 0;
+    const delayed = tracking.filter((t) => t.status?.toLowerCase().includes("delay")).length;
+    const onTimePercent =
+      tracking.length > 0 ? Math.round(((tracking.length - delayed) / tracking.length) * 100) : 100;
+    return { avgSpeed, delayed, onTimePercent };
+  }, [tracking]);
+
+  const selected = tracking.find((t) => t._id === selectedId) ?? tracking[0];
+  const selectedRoute = selected
+    ? routes.find((r) => r._id === selected.route?._id)
+    : undefined;
+  const routeCoords = selectedRoute?.pathCoordinates ?? [];
 
   const columns: Column<TrackingData & Record<string, unknown>>[] = [
     {
@@ -137,12 +159,11 @@ export default function TrackingPage() {
     {
       key: "status",
       label: "Status",
-      render: () => (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-          <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-          Live
-        </span>
-      ),
+      render: (item) => {
+        const t = item as unknown as TrackingData;
+        const isDelayed = t.status?.toLowerCase().includes("delay");
+        return <StatusBadge label={t.status || "Live"} tone={isDelayed ? "warning" : "success"} pulse />;
+      },
     },
   ];
 
@@ -151,12 +172,13 @@ export default function TrackingPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow="Live Operations"
         title="Tracking"
-        description="Manage live bus tracking"
+        description="Watch your fleet move in real time and manage tracking sessions."
         action={
           <button
             onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#22a34a] px-4 py-2 text-sm font-medium text-white hover:bg-[#1c8a3e]"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:brightness-110"
           >
             <Plus className="h-4 w-4" />
             Initialize Tracking
@@ -164,25 +186,65 @@ export default function TrackingPage() {
         }
       />
 
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatsCard icon={Radio} label="Active Trackings" value={tracking.length} tone="primary" />
+        <StatsCard icon={Gauge} label="Average Speed" value={`${summary.avgSpeed} km/h`} tone="accent" />
+        <StatsCard icon={TrendingUp} label="On-Time" value={`${summary.onTimePercent}%`} tone="info" />
+        <StatsCard icon={AlertTriangle} label="Delayed" value={summary.delayed} tone="warning" />
+      </div>
+
+      {/* Live dashboard: selector + map */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-1">
+          <TrackingSidebar
+            tracking={tracking}
+            selectedId={selected?._id ?? null}
+            onSelect={setSelectedId}
+          />
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-sidebar-border bg-sidebar lg:col-span-2">
+          <div className="h-[420px]">
+            <MapView
+              center={
+                selected ? [selected.latitude, selected.longitude] : routeCoords[0]
+              }
+              routeCoordinates={routeCoords}
+              routeLabel={
+                selectedRoute ? `${selectedRoute.from} → ${selectedRoute.to}` : undefined
+              }
+              showBus={!!selected}
+              busPosition={selected ? [selected.latitude, selected.longitude] : undefined}
+              busName={selected?.bus?.busNumber || "Bus"}
+              speed={selected?.speed}
+              eta={selected?.eta}
+              nextStop={selected?.nextStop}
+            />
+          </div>
+          {tracking.length === 0 && (
+            <div className="flex items-center justify-center p-6 text-sm text-sidebar-muted">
+              No active tracking sessions. Initialize one to see it live here.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Full list */}
       <DataTable
         data={tracking as unknown as (TrackingData & Record<string, unknown>)[]}
         columns={columns}
         onDelete={(item) => confirmDelete(item as unknown as TrackingData)}
+        searchPlaceholder="Search by bus number..."
+        emptyMessage="No tracking sessions yet."
       />
 
-      <Modal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        title="Initialize Tracking"
-      >
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Initialize Tracking">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Bus
-            </label>
+            <label className="block text-sm font-medium text-foreground">Bus</label>
             <select
               {...register("bus")}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
             >
               <option value="">Select a bus</option>
               {buses.map((b) => (
@@ -191,18 +253,14 @@ export default function TrackingPage() {
                 </option>
               ))}
             </select>
-            {errors.bus && (
-              <p className="mt-1 text-xs text-red-500">{errors.bus.message}</p>
-            )}
+            {errors.bus && <p className="mt-1 text-xs text-danger">{errors.bus.message}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Route
-            </label>
+            <label className="block text-sm font-medium text-foreground">Route</label>
             <select
               {...register("route")}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
             >
               <option value="">Select a route</option>
               {routes.map((r) => (
@@ -211,23 +269,21 @@ export default function TrackingPage() {
                 </option>
               ))}
             </select>
-            {errors.route && (
-              <p className="mt-1 text-xs text-red-500">{errors.route.message}</p>
-            )}
+            {errors.route && <p className="mt-1 text-xs text-danger">{errors.route.message}</p>}
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
               onClick={() => setShowModal(false)}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-lg bg-[#22a34a] px-4 py-2 text-sm font-medium text-white hover:bg-[#1c8a3e] disabled:opacity-50"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:brightness-110 disabled:opacity-50"
             >
               {submitting ? "Initializing..." : "Initialize"}
             </button>

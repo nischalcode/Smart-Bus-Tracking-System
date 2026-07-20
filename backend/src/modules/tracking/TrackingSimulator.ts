@@ -1,4 +1,5 @@
 import TrackingModel from "./TrackingModel.js";
+import { getIO } from "../../socket/index.js";
 
 export const startTrackingSimulation = (): void => {
   console.log("Initializing GPS Live Tracking Simulator...");
@@ -53,6 +54,14 @@ export const startTrackingSimulation = (): void => {
 
       if (bulkOps.length > 0) {
         await TrackingModel.bulkWrite(bulkOps);
+
+          const updatedTracking = await TrackingModel.find({})
+            .populate("bus")
+            .populate("route");
+
+          // Emit live updates to all connected clients
+          const io = getIO();
+          io.emit("tracking-update", updatedTracking);
       }
     } catch (error: any) {
       console.error("GPS Simulator Loop Error:", error.message);

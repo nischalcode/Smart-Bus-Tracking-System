@@ -21,6 +21,17 @@ const routeSchema = new Schema(
       type: [[Number]], // Array of [lat, lng] arrays
       required: true,
     },
+    assignedBuses: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Bus",
+      },
+    ],
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
   { timestamps: true }
 );

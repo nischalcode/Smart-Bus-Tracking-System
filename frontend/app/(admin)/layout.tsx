@@ -38,7 +38,7 @@ export default function AdminLayout({
 
   if (checking) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
+      <div className="flex h-screen items-center justify-center bg-background">
         <LoadingSpinner />
       </div>
     );
@@ -46,7 +46,7 @@ export default function AdminLayout({
 
   return (
     <Providers>
-      <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
+      <div className="flex h-screen overflow-hidden bg-background text-foreground">
         <AdminSidebar
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
@@ -55,7 +55,7 @@ export default function AdminLayout({
         <div className="flex flex-1 flex-col overflow-hidden">
           <AdminHeader onMenuClick={() => setSidebarOpen(true)} />
 
-          <main className="flex-1 overflow-y-auto bg-gray-50 p-4 dark:bg-gray-900 sm:p-6">
+          <main className="flex-1 overflow-y-auto p-4 sm:p-6">
             {children}
           </main>
         </div>

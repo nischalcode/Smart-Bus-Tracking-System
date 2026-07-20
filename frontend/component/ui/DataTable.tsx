@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Search, Edit2, Trash2, ChevronLeft, ChevronRight, Inbox } from "lucide-react";
+import { useState, useMemo, ReactNode } from "react";
+import { Search, Edit2, Trash2, ChevronLeft, ChevronRight, Inbox, Eye, Download } from "lucide-react";
 
 export interface Column<T> {
   key: string;
@@ -15,15 +15,19 @@ interface DataTableProps<T> {
   columns: Column<T>[];
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
+  onView?: (item: T) => void;
   pageSize?: number;
   emptyMessage?: string;
   loading?: boolean;
+  filters?: ReactNode;
+  onExport?: (rows: T[]) => void;
+  searchPlaceholder?: string;
 }
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-gray-500">
-      <Inbox className="mb-3 h-12 w-12" />
+    <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+      <Inbox className="mb-3 h-12 w-12 opacity-40" />
       <p className="text-sm">{message}</p>
     </div>
   );
@@ -31,10 +35,10 @@ function EmptyState({ message }: { message: string }) {
 
 function SkeletonRow({ cols }: { cols: number }) {
   return (
-    <tr className="border-b border-gray-100 dark:border-gray-800">
+    <tr className="border-b border-border">
       {Array.from({ length: cols }).map((_, i) => (
         <td key={i} className="px-4 py-3">
-          <div className="h-4 w-full animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+          <div className="h-4 w-full animate-pulse rounded bg-muted" />
         </td>
       ))}
     </tr>
@@ -46,9 +50,13 @@ export default function DataTable<T extends Record<string, any>>({
   columns,
   onEdit,
   onDelete,
+  onView,
   pageSize = 10,
   emptyMessage = "No records found",
   loading = false,
+  filters,
+  onExport,
+  searchPlaceholder = "Search...",
 }: DataTableProps<T>) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -73,38 +81,53 @@ export default function DataTable<T extends Record<string, any>>({
   const safePage = Math.min(page, totalPages);
   const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
+  const actionCount = [onView, onEdit, onDelete].filter(Boolean).length;
+
   return (
-    <div className="w-full overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
-      <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
-          />
+    <div className="w-full overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative max-w-sm flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder={searchPlaceholder}
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="w-full rounded-lg border border-border bg-muted/60 py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
+            />
+          </div>
+          {filters}
         </div>
+
+        {onExport && (
+          <button
+            onClick={() => onExport(filtered)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export CSV
+          </button>
+        )}
       </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+            <tr className="border-b border-border bg-muted/50">
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className="px-4 py-3 font-medium text-gray-600 dark:text-gray-300"
+                  className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
                 >
                   {col.label}
                 </th>
               ))}
-              {(onEdit || onDelete) && (
-                <th className="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">
+              {actionCount > 0 && (
+                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Actions
                 </th>
               )}
@@ -113,27 +136,37 @@ export default function DataTable<T extends Record<string, any>>({
           <tbody>
             {loading
               ? Array.from({ length: pageSize }).map((_, i) => (
-                  <SkeletonRow key={i} cols={columns.length + (onEdit || onDelete ? 1 : 0)} />
+                  <SkeletonRow key={i} cols={columns.length + (actionCount > 0 ? 1 : 0)} />
                 ))
               : paged.map((item, idx) => (
                   <tr
                     key={idx}
-                    className="border-b border-gray-100 last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50"
+                    className="group border-b border-border/70 last:border-0 hover:bg-muted/40"
                   >
                     {columns.map((col) => (
-                      <td key={col.key} className="px-4 py-3 text-gray-700 dark:text-gray-300">
+                      <td key={col.key} className="px-4 py-3 text-foreground/90">
                         {col.render
                           ? col.render(item)
                           : (item[col.key] as React.ReactNode)}
                       </td>
                     ))}
-                    {(onEdit || onDelete) && (
+                    {actionCount > 0 && (
                       <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-1 opacity-70 transition-opacity group-hover:opacity-100">
+                          {onView && (
+                            <button
+                              onClick={() => onView(item)}
+                              className="rounded-lg p-1.5 text-muted-foreground hover:bg-info/10 hover:text-info"
+                              title="View details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                          )}
                           {onEdit && (
                             <button
                               onClick={() => onEdit(item)}
-                              className="rounded-lg p-1.5 text-gray-400 hover:bg-green-50 hover:text-[#22a34a] dark:hover:bg-green-900/20"
+                              className="rounded-lg p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                              title="Edit"
                             >
                               <Edit2 className="h-4 w-4" />
                             </button>
@@ -141,7 +174,8 @@ export default function DataTable<T extends Record<string, any>>({
                           {onDelete && (
                             <button
                               onClick={() => onDelete(item)}
-                              className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+                              className="rounded-lg p-1.5 text-muted-foreground hover:bg-danger/10 hover:text-danger"
+                              title="Delete"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -158,8 +192,8 @@ export default function DataTable<T extends Record<string, any>>({
       {!loading && filtered.length === 0 && <EmptyState message={emptyMessage} />}
 
       {!loading && filtered.length > 0 && (
-        <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 dark:border-gray-700">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="flex items-center justify-between border-t border-border px-4 py-3">
+          <p className="text-sm text-muted-foreground">
             Showing {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, filtered.length)} of{" "}
             {filtered.length}
           </p>
@@ -167,7 +201,7 @@ export default function DataTable<T extends Record<string, any>>({
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={safePage <= 1}
-              className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-gray-800"
+              className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -182,17 +216,17 @@ export default function DataTable<T extends Record<string, any>>({
               }, [])
               .map((p, i) =>
                 p === "..." ? (
-                  <span key={`dots-${i}`} className="px-1 text-gray-400">
+                  <span key={`dots-${i}`} className="px-1 text-muted-foreground">
                     ...
                   </span>
                 ) : (
                   <button
                     key={p}
                     onClick={() => setPage(p as number)}
-                    className={`min-w-[2rem] rounded-lg px-2 py-1 text-sm ${
+                    className={`min-w-[2rem] rounded-lg px-2 py-1 text-sm font-medium ${
                       safePage === p
-                        ? "bg-[#22a34a] text-white"
-                        : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted"
                     }`}
                   >
                     {p}
@@ -202,7 +236,7 @@ export default function DataTable<T extends Record<string, any>>({
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={safePage >= totalPages}
-              className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-gray-800"
+              className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ChevronRight className="h-4 w-4" />
             </button>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Plus, Check, X } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { Plus, Calendar, CheckCircle2, Route as RouteIcon, Bus as BusIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,6 +9,9 @@ import DataTable, { Column } from "@/component/ui/DataTable";
 import Modal from "@/component/ui/Modal";
 import ConfirmDialog from "@/component/ui/ConfirmDialog";
 import PageHeader from "@/component/ui/PageHeader";
+import StatsCard from "@/component/ui/StatsCard";
+import StatusBadge from "@/component/ui/StatusBadge";
+import ScheduleTimeline from "@/component/admin/ScheduleTimeline";
 import { useAuth } from "@/context/AuthContext";
 import {
   fetchApi,
@@ -72,6 +75,7 @@ export default function SchedulesPage() {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const openCreate = () => {
@@ -122,19 +126,31 @@ export default function SchedulesPage() {
     }
   };
 
-  const columns: Column<ScheduleData>[] = [
+  const summary = useMemo(() => {
+    const active = schedules.filter((s) => s.active).length;
+    const routesCovered = new Set(schedules.map((s) => s.route?._id).filter(Boolean)).size;
+    const busesAssigned = new Set(schedules.map((s) => s.bus?._id).filter(Boolean)).size;
+    return { active, routesCovered, busesAssigned };
+  }, [schedules]);
+
+  const columns: Column<ScheduleData & Record<string, unknown>>[] = [
     {
       key: "route",
       label: "Route",
       searchable: true,
-      render: (item) => (
-        <span className="font-medium">{item.route?.routeNo} {item.route?.from} → {item.route?.to}</span>
-      ),
+      render: (item) => {
+        const s = item as unknown as ScheduleData;
+        return (
+          <span className="font-semibold text-foreground">
+            {s.route?.routeNo} {s.route?.from} → {s.route?.to}
+          </span>
+        );
+      },
     },
     {
       key: "bus",
       label: "Bus",
-      render: (item) => item.bus?.busNumber || "N/A",
+      render: (item) => (item as unknown as ScheduleData).bus?.busNumber || "N/A",
     },
     { key: "firstBus", label: "First Bus" },
     { key: "lastBus", label: "Last Bus" },
@@ -142,35 +158,35 @@ export default function SchedulesPage() {
     {
       key: "status",
       label: "Status",
-      render: (item) => (
-        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-          item.status === "On Time" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
-        }`}>
-          {item.status}
-        </span>
-      ),
+      render: (item) => {
+        const s = item as unknown as ScheduleData;
+        return <StatusBadge label={s.status} tone={s.status === "On Time" ? "success" : "warning"} />;
+      },
     },
     {
       key: "active",
       label: "Active",
-      render: (item) =>
-        item.active ? (
-          <Check size={16} className="text-green-600" />
+      render: (item) => {
+        const s = item as unknown as ScheduleData;
+        return s.active ? (
+          <CheckCircle2 size={16} className="text-primary" />
         ) : (
-          <X size={16} className="text-red-400" />
-        ),
+          <span className="text-xs text-muted-foreground">Inactive</span>
+        );
+      },
     },
   ];
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
+        eyebrow="Timetables"
         title="Schedule Management"
-        description="Manage bus schedules and timetables"
+        description="Manage bus schedules, service windows and frequency."
         action={
           <button
             onClick={openCreate}
-            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:bg-green-700"
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:brightness-110"
           >
             <Plus size={16} />
             Add Schedule
@@ -178,68 +194,115 @@ export default function SchedulesPage() {
         }
       />
 
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatsCard icon={Calendar} label="Total Schedules" value={schedules.length} tone="primary" />
+        <StatsCard icon={CheckCircle2} label="Active" value={summary.active} tone="accent" />
+        <StatsCard icon={RouteIcon} label="Routes Covered" value={summary.routesCovered} tone="info" />
+        <StatsCard icon={BusIcon} label="Buses Assigned" value={summary.busesAssigned} tone="neutral" />
+      </div>
+
+      <ScheduleTimeline schedules={schedules} />
+
       <DataTable
-        data={schedules as any}
+        data={schedules as unknown as (ScheduleData & Record<string, unknown>)[]}
         columns={columns}
-        onEdit={openEdit}
-        onDelete={(item) => { setDeleting(item); setShowDeleteConfirm(true); }}
+        onEdit={(item) => openEdit(item as unknown as ScheduleData)}
+        onDelete={(item) => {
+          setDeleting(item as unknown as ScheduleData);
+          setShowDeleteConfirm(true);
+        }}
         loading={loading}
         emptyMessage="No schedules found"
+        searchPlaceholder="Search by route..."
       />
 
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editing ? "Edit Schedule" : "Add Schedule"}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Route</label>
-            <select {...register("route")} className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+            <label className="mb-1 block text-sm font-medium text-foreground">Route</label>
+            <select
+              {...register("route")}
+              className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
+            >
               <option value="">Select route</option>
               {routes.map((r) => (
-                <option key={r._id} value={r._id}>{r.routeNo} - {r.from} → {r.to}</option>
+                <option key={r._id} value={r._id}>
+                  {r.routeNo} - {r.from} → {r.to}
+                </option>
               ))}
             </select>
-            {errors.route && <p className="mt-1 text-xs text-red-500">{errors.route.message}</p>}
+            {errors.route && <p className="mt-1 text-xs text-danger">{errors.route.message}</p>}
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Bus</label>
-            <select {...register("bus")} className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+            <label className="mb-1 block text-sm font-medium text-foreground">Bus</label>
+            <select
+              {...register("bus")}
+              className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
+            >
               <option value="">Select bus</option>
               {buses.map((b) => (
-                <option key={b._id} value={b._id}>{b.busNumber}</option>
+                <option key={b._id} value={b._id}>
+                  {b.busNumber}
+                </option>
               ))}
             </select>
-            {errors.bus && <p className="mt-1 text-xs text-red-500">{errors.bus.message}</p>}
+            {errors.bus && <p className="mt-1 text-xs text-danger">{errors.bus.message}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">First Bus</label>
-              <input {...register("firstBus")} placeholder="e.g. 6:00 AM" className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-              {errors.firstBus && <p className="mt-1 text-xs text-red-500">{errors.firstBus.message}</p>}
+              <label className="mb-1 block text-sm font-medium text-foreground">First Bus</label>
+              <input
+                {...register("firstBus")}
+                placeholder="e.g. 6:00 AM"
+                className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
+              />
+              {errors.firstBus && <p className="mt-1 text-xs text-danger">{errors.firstBus.message}</p>}
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Last Bus</label>
-              <input {...register("lastBus")} placeholder="e.g. 10:00 PM" className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-              {errors.lastBus && <p className="mt-1 text-xs text-red-500">{errors.lastBus.message}</p>}
+              <label className="mb-1 block text-sm font-medium text-foreground">Last Bus</label>
+              <input
+                {...register("lastBus")}
+                placeholder="e.g. 10:00 PM"
+                className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
+              />
+              {errors.lastBus && <p className="mt-1 text-xs text-danger">{errors.lastBus.message}</p>}
             </div>
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Frequency</label>
-            <input {...register("frequency")} placeholder="e.g. Every 15 min" className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-            {errors.frequency && <p className="mt-1 text-xs text-red-500">{errors.frequency.message}</p>}
+            <label className="mb-1 block text-sm font-medium text-foreground">Frequency</label>
+            <input
+              {...register("frequency")}
+              placeholder="e.g. Every 15 min"
+              className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
+            />
+            {errors.frequency && <p className="mt-1 text-xs text-danger">{errors.frequency.message}</p>}
           </div>
 
           <label className="flex items-center gap-2">
-            <input type="checkbox" {...register("active")} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Active</span>
+            <input
+              type="checkbox"
+              {...register("active")}
+              className="h-4 w-4 rounded border-border text-primary focus:ring-ring"
+            />
+            <span className="text-sm text-foreground">Active</span>
           </label>
 
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={() => setShowModal(false)} className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+            <button
+              type="button"
+              onClick={() => setShowModal(false)}
+              className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+            >
               Cancel
             </button>
-            <button type="submit" disabled={submitting} className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:bg-green-700 disabled:opacity-50">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:brightness-110 disabled:opacity-50"
+            >
               {submitting ? "Saving..." : editing ? "Update" : "Create"}
             </button>
           </div>
@@ -248,10 +311,10 @@ export default function SchedulesPage() {
 
       <ConfirmDialog
         isOpen={showDeleteConfirm}
-        onClose={() => { setShowDeleteConfirm(false); setDeleting(null); }}
+        onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDelete}
         title="Delete Schedule"
-        message={`Are you sure you want to delete this schedule? This action cannot be undone.`}
+        message="Are you sure you want to delete this schedule? This action cannot be undone."
       />
     </div>
   );

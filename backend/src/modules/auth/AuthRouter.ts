@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { AuthController } from "./AuthContoroller.js";
+import { AuthController } from "./AuthController.js";
 import { validateBody } from "../../middleware/ValidatorMiddleware.js";
 import { authenticate } from "../../middleware/AuthMiddleware.js";
 import rateLimit from "express-rate-limit";
