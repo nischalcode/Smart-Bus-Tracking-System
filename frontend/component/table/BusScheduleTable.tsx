@@ -20,15 +20,40 @@ const BusScheduleTable = ({
   const { t } = useLanguage();
   const [schedules, setSchedules] = useState<ScheduleData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const LIMIT = 10;
 
-  useEffect(() => {
-    fetchApi<SchedulesResponse>("/schedules")
+  const fetchSchedules = (pageNum: number, append: boolean) => {
+    const setter = append ? setLoadingMore : setLoading;
+    setter(true);
+    fetchApi<SchedulesResponse>(`/schedules?page=${pageNum}&limit=${LIMIT}`)
       .then((data) => {
-        if (data.success && data.schedules) setSchedules(data.schedules);
+        if (data.success && data.schedules) {
+          setSchedules((prev) =>
+            append ? [...prev, ...data.schedules] : data.schedules
+          );
+          if (data.pagination) {
+            setHasMore(data.pagination.page < data.pagination.pages);
+          }
+        }
       })
       .catch((err) => console.error("Failed to load schedules:", err))
-      .finally(() => setLoading(false));
+      .finally(() => setter(false));
+  };
+
+  useEffect(() => {
+    setPage(1);
+    setHasMore(true);
+    fetchSchedules(1, false);
   }, []);
+
+  const handleViewMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchSchedules(nextPage, true);
+  };
 
   const filteredSchedules = routeFilterId
     ? schedules.filter((schedule) => schedule.route?._id === routeFilterId)
@@ -156,15 +181,19 @@ const BusScheduleTable = ({
         </table>
       </div>
 
-      <div className="flex justify-center border-t border-border p-4">
-        <button
-          type="button"
-          className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted/10"
-        >
-          {t("schedule_page.view_more")}
-          <IoChevronDown className="text-xs" />
-        </button>
-      </div>
+      {hasMore && (
+        <div className="flex justify-center border-t border-border p-4">
+          <button
+            type="button"
+            onClick={handleViewMore}
+            disabled={loadingMore}
+            className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted/10 disabled:opacity-50"
+          >
+            {loadingMore ? t("schedule_page.loading") : t("schedule_page.view_more")}
+            <IoChevronDown className={`text-xs ${loadingMore ? "animate-spin" : ""}`} />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

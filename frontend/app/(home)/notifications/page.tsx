@@ -34,16 +34,40 @@ const Page = () => {
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeCategory, setActiveCategory] = useState<string>("All");
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const LIMIT = 10;
 
-  useEffect(() => {
-    fetchApi<NotificationsResponse>("/notifications")
+  const fetchNotifications = (pageNum: number, append: boolean) => {
+    const setter = append ? setLoadingMore : setLoading;
+    setter(true);
+    fetchApi<NotificationsResponse>(`/notifications?page=${pageNum}&limit=${LIMIT}`)
       .then((data) => {
-        if (data.success && data.notifications)
-          setNotifications(data.notifications);
+        if (data.success && data.notifications) {
+          setNotifications((prev) =>
+            append ? [...prev, ...data.notifications] : data.notifications
+          );
+          if (data.pagination) {
+            setHasMore(data.pagination.page < data.pagination.pages);
+          }
+        }
       })
       .catch((err) => console.error("Failed to load notifications:", err))
-      .finally(() => setLoading(false));
+      .finally(() => setter(false));
+  };
+
+  useEffect(() => {
+    setPage(1);
+    setHasMore(true);
+    fetchNotifications(1, false);
   }, []);
+
+  const handleLoadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchNotifications(nextPage, true);
+  };
 
   async function markAllAsRead() {
     try {
@@ -140,15 +164,19 @@ const Page = () => {
               })()
             )}
 
-            <div className="p-4 border-t border-brand-lightgray text-center">
-              <button
-                type="button"
-                className="text-brand-darkgreen font-medium text-sm hover:underline flex items-center justify-center gap-2 mx-auto"
-              >
-                {t("notifications.load_more") ?? "Load More"}{" "}
-                <i className="fa-solid fa-chevron-down text-xs"></i>
-              </button>
-            </div>
+            {hasMore && (
+              <div className="p-4 border-t border-brand-lightgray text-center">
+                <button
+                  type="button"
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="text-brand-darkgreen font-medium text-sm hover:underline flex items-center justify-center gap-2 mx-auto disabled:opacity-50"
+                >
+                  {loadingMore ? t("notifications.loading") : (t("notifications.load_more") ?? "Load More")}{" "}
+                  <i className={`fa-solid fa-chevron-down text-xs ${loadingMore ? "animate-spin" : ""}`}></i>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

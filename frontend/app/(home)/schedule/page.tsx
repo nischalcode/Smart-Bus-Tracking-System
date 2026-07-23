@@ -16,7 +16,7 @@ import RouteTimeline from "@/component/features/RouteTimeline";
 import ScheduleHeader from "@/component/head/ScheduleHeader";
 import BusScheduleTable from "@/component/table/BusScheduleTable";
 import TrackLayout from "@/component/track-layout/TrackLayout";
-import type { ScheduleData } from "@/utils/api";
+import { fetchApi, type ScheduleData, type SchedulesResponse } from "@/utils/api";
 
 const MapView = dynamic(() => import("@/component/LiveTracking/MapView"), {
   ssr: false,
@@ -33,6 +33,41 @@ const Page = () => {
 
   function handleSelect(schedule: ScheduleData) {
     setSelected((prev) => (prev?._id === schedule._id ? null : schedule));
+  }
+
+  async function handleDownloadSchedule() {
+    try {
+      const data = await fetchApi<SchedulesResponse>("/schedules?limit=1000");
+      if (!data.success || !data.schedules?.length) return;
+
+      const headers = ["Route No", "From", "To", "Via", "Bus Number", "First Bus", "Last Bus", "Frequency", "Status"];
+      const rows = data.schedules.map((s) => [
+        s.route?.routeNo ?? "",
+        s.route?.from ?? "",
+        s.route?.to ?? "",
+        s.route?.via ?? "",
+        s.bus?.busNumber ?? "",
+        s.firstBus ?? "",
+        s.lastBus ?? "",
+        s.frequency ?? "",
+        s.status ?? "",
+      ]);
+
+      const csvContent = [
+        headers.join(","),
+        ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+      ].join("\n");
+
+      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "smartbus-full-schedule.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download schedule:", err);
+    }
   }
 
   const route = selected?.route;
@@ -92,7 +127,7 @@ const Page = () => {
                     <span>
                       Bus:{" "}
                       <span className="font-medium text-gray-900">
-                        {selected.bus?.busNumber}
+                        {selected.bus?.busNumber || "—"}
                       </span>
                     </span>
                   </div>
@@ -114,14 +149,39 @@ const Page = () => {
                       {selected.frequency})
                     </span>
                   </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <span className="text-gray-500">Status</span>
+                    <span
+                      className={`rounded-md px-2 py-0.5 text-xs font-medium ${
+                        selected.status === "On Time"
+                          ? "bg-green-50 text-green-700"
+                          : selected.status === "Delays"
+                            ? "bg-red-50 text-red-700"
+                            : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {selected.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Active</span>
+                    <span
+                      className={`text-xs font-medium ${
+                        selected.active ? "text-green-600" : "text-gray-400"
+                      }`}
+                    >
+                      {selected.active ? "Yes" : "No"}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-2xl border border-gray-200 shadow-md">
+              <div className="w-full h-[300px] lg:h-[400px] rounded-2xl border border-gray-200 shadow-md overflow-hidden">
                 <MapView
                   routeCoordinates={route.pathCoordinates || []}
                   routeLabel={`Route ${route.routeNo}: ${route.from} → ${route.to}`}
                   fullScreen={false}
+                  autoSize={false}
                 />
               </div>
 
@@ -148,6 +208,7 @@ const Page = () => {
                 </div>
                 <button
                   type="button"
+                  onClick={handleDownloadSchedule}
                   className="flex h-8 w-8 items-center justify-center rounded border border-green-200 bg-white text-green-600 transition-colors hover:bg-green-100"
                 >
                   <Download className="text-sm" />

@@ -41,7 +41,7 @@ const WhyChoose = () => {
       <div className="mx-auto flex flex-col lg:flex-row items-center gap-16">
        
         <div className="w-full lg:w-1/2 p-10">
-          <h2 className="text-3xl lg:text-4xl font-bold mb-2 dark:text-white">
+          <h2 className="text-3xl lg:text-4xl font-bold mb-2 text-foreground">
             {t("why_choose.title")}
           </h2>
 
@@ -58,7 +58,7 @@ const WhyChoose = () => {
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-bold mb-2 dark:text-white">
+                    <h4 className="text-sm font-bold mb-2 text-foreground">
                       {t(feature.title)}
                     </h4>
 
@@ -73,7 +73,7 @@ const WhyChoose = () => {
         </div>
 
        
-        <div className="w-full lg:w-1/2 flex justify-center relative">
+        {/* <div className="w-full lg:w-1/2 flex justify-center relative">
           <div className="relative w-75 h-137.5 overflow-visible">
            
             <div className="absolute inset-0 bg-white rounded-[40px] border-8 border-gray-900 shadow-2xl overflow-hidden">
@@ -135,7 +135,86 @@ const WhyChoose = () => {
               <Bell className="w-7 h-7" />
             </div>
           </div>
+        </div> */}
+
+          <div className="w-full lg:w-1/2 flex justify-center">
+  {/* Phone */}
+  <div className="relative w-75 h-150">
+
+    {/* Floating Notification Button */}
+    <div className="absolute top-24 -right-8 z-30 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-xl">
+      <Bell className="w-7 h-7" />
+    </div>
+
+    {/* Phone Body */}
+    <div className="relative h-full w-full rounded-[45px] dark:bg-white bg-black p-3 shadow-2xl">
+
+      {/* Notch */}
+      <div className="absolute top-3 left-1/2 z-20 -translate-x-1/2 h-7 w-36 rounded-b-3xl dark:bg-white bg-black"></div>
+
+      {/* Screen */}
+      <div className="relative h-full w-full overflow-hidden rounded-[34px] bg-white">
+
+        {/* Map */}
+        <MapContainer
+          center={[27.7172, 85.324]}
+          zoom={14}
+          zoomControl={false}
+          dragging={false}
+          scrollWheelZoom={false}
+          doubleClickZoom={false}
+          touchZoom={false}
+          keyboard={false}
+          attributionControl={false}
+          className="h-full w-full"
+        >
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+
+          <Polyline
+            positions={[
+              [27.7172, 85.324],
+              [27.7205, 85.329],
+              [27.724, 85.334],
+            ]}
+            pathOptions={{
+              color: "#22c55e",
+              weight: 5,
+            }}
+          />
+
+          <Marker position={[27.724, 85.334]}>
+            <Popup>Bus 12A</Popup>
+          </Marker>
+        </MapContainer>
+
+        {/* Route Card */}
+        <div className="absolute top-12 left-4 right-4 z-1000 rounded-xl bg-white p-4 shadow-lg">
+          <h3 className="text-xl dark:text-balck font-bold">12A</h3>
+
+          <p className="mb-3 border-b pb-3 text-xs text-gray-500">
+            City Center → Airport
+          </p>
+
+          <p className="text-[10px] text-gray-500">
+            Next Stop
+          </p>
+
+          <h4 className="text-sm dark:text-balck font-bold">
+            Green Street
+          </h4>
+
+          <p className="text-xs font-semibold text-primary">
+            2 min away
+          </p>
         </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
       </div>
     </section>
   );
