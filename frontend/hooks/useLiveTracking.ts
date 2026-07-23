@@ -32,6 +32,11 @@ export function useLiveTracking() {
     const fetchTracking = () => {
       fetchApi<TrackingResponse>("/tracking")
         .then((data) => {
+          console.log("Tracking api",data);
+          for (const t of tracking) {
+            console.log("TRACKING RECORD:", t);
+            console.log("ROUTE VALUE:", t.route);
+          }
           if (!mounted) return;
           if (data.success && data.tracking) setTracking(data.tracking);
         })
@@ -50,14 +55,39 @@ export function useLiveTracking() {
     };
   }, []);
 
-  const trackingByRouteId = useMemo(() => {
-    const map = new Map<string, TrackingData>();
-    for (const t of tracking) {
-      if (t.route?._id) map.set(t.route._id, t);
-    }
-    return map;
-  }, [tracking]);
+  // const trackingByRouteId = useMemo(() => {
+  //   const map = new Map<string, TrackingData>();
+  //   for (const t of tracking) {
+  //     if (t.route?._id) map.set(t.route._id, t);
+  //   }
+  //   return map;
+  // }, [tracking]);
+const trackingByRouteId = useMemo(() => {
+  const map = new Map<string, TrackingData>();
 
+  console.log("FULL TRACKING ARRAY:", tracking);
+
+  for (const t of tracking) {
+    console.log("TRACKING ITEM:", t);
+    console.log("ROUTE FIELD:", t.route);
+    console.log("TYPE:", typeof t.route);
+
+    const routeId =
+      typeof t.route === "string"
+        ? t.route
+        : t.route?._id;
+
+    console.log("EXTRACTED ROUTE ID:", routeId);
+
+    if (routeId) {
+      map.set(routeId, t);
+    }
+  }
+
+  console.log("FINAL MAP:", map);
+
+  return map;
+}, [tracking]);
   return {
     routes,
     tracking,

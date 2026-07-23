@@ -14,7 +14,17 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { fetchRoadRoute } from "@/utils/routing";
 import { initLeafletIcons } from "@/utils/leaflet";
-
+const busIcon = L.divIcon({
+  html: `
+    <div style="
+      font-size:30px;
+    ">
+      🚌
+    </div>
+  `,
+  className: "",
+  iconSize: [30, 30],
+});
 // ==========================
 // Fit Route
 // ==========================
@@ -22,6 +32,8 @@ const FitBounds = ({ positions }: { positions: LatLngExpression[] }) => {
   const map = useMap();
 
   useEffect(() => {
+
+  console.log("FIT BOUNDS RUNNING");
     if (positions.length >= 2) {
       map.fitBounds(positions as any, {
         padding: [40, 40],
@@ -44,7 +56,9 @@ const CenterOnBus = ({
   const map = useMap();
 
   useEffect(() => {
-    map.setView(center, map.getZoom());
+    
+  console.log("center on bus");
+    map.panTo(center);
   }, [center, map]);
 
   return null;
@@ -145,6 +159,9 @@ const MapView = ({
   showBus = false,
   fullScreen = false,
 }: MapViewProps) => {
+  
+console.log("SHOW BUS:", showBus);
+console.log("BUS POSITION:", busPosition);
   useEffect(() => {
     initLeafletIcons();
   }, []);
@@ -167,7 +184,10 @@ const MapView = ({
     }
 
     watchId.current = navigator.geolocation.watchPosition(
-      (position) => {
+      (position) => {console.log("GPS UPDATE", [
+      position.coords.latitude,
+      position.coords.longitude,
+    ]);
         setDeviceLocation([
           position.coords.latitude,
           position.coords.longitude,
@@ -182,6 +202,9 @@ const MapView = ({
         timeout: 10000,
       }
     );
+    console.log("MAPVIEW RENDER");
+console.log("deviceLocation", deviceLocation);
+console.log("busPosition", busPosition);
 
     return () => {
       if (watchId.current !== null) {
@@ -234,7 +257,7 @@ const MapView = ({
       }`}
     >
       <MapContainer
-        center={deviceLocation ?? center}
+        center={center}
         zoom={15}
         zoomControl={false}
         className="h-full w-full"
@@ -244,7 +267,7 @@ const MapView = ({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <FollowDevice location={deviceLocation} />
+        {/* <FollowDevice location={deviceLocation} /> */}
 
         {showBus && busPosition ? (
           <CenterOnBus center={busPosition} />
@@ -273,19 +296,22 @@ const MapView = ({
           </Marker>
         ))}
         {showBus && busPosition && (
-          <Marker
-            key={busKey}
-            position={busPosition}
-          >
-            <Popup>
-              <div>
-                <h3 className="font-bold">{busName}</h3>
-                <p>{routeLabel}</p>
-                <p>{eta}</p>
-              </div>
-            </Popup>
-          </Marker>
+        <Marker
+          key={busKey}
+          position={busPosition}
+          icon={busIcon}
+        >
+          <Popup>
+            <div>
+              <h3 className="font-bold">{busName}</h3>
+              <p>{routeLabel}</p>
+              <p>{eta}</p>
+            </div>
+          </Popup>
+        </Marker>
         )}
+          
+        
 
         {/* Device Location */}
         {deviceLocation && (
