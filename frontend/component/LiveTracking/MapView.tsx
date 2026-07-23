@@ -144,6 +144,7 @@ interface MapViewProps {
   nextStop?: string;
   showBus?: boolean;
   fullScreen?: boolean;
+  autoSize?: boolean;
 }
 
 const MapView = ({
@@ -158,6 +159,7 @@ const MapView = ({
   nextStop = "N/A",
   showBus = false,
   fullScreen = false,
+  autoSize = true,
 }: MapViewProps) => {
   
 console.log("SHOW BUS:", showBus);
@@ -250,10 +252,12 @@ console.log("busPosition", busPosition);
 
   return (
     <div
-      className={`relative z-0 overflow-hidden ${
+      className={`relative z-0 overflow-hidden h-full w-full ${
         fullScreen
-          ? "h-full w-full"
-          : "h-150 w-full rounded-2xl border shadow lg:w-2/3"
+          ? ""
+          : autoSize
+            ? "h-150 rounded-2xl border shadow lg:w-2/3"
+            : ""
       }`}
     >
       <MapContainer

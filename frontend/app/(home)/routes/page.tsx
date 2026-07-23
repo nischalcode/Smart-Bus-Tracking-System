@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import BusSearchHeader from "@/component/head/BusSearchHeader";
 import dynamic from "next/dynamic";
+const BusSearchHeader = dynamic(() => import("@/component/head/BusSearchHeader"), { ssr: false });
 const MapView = dynamic(() => import("@/component/LiveTracking/MapView"), { ssr: false });
 import RouteSidebar from "@/component/LiveTracking/RouteSidebar";
 import Stats from "@/component/stats/Stats";
@@ -13,6 +13,8 @@ const Page = () => {
   const [routes, setRoutes] = useState<RouteData[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRouteFilter, setSelectedRouteFilter] = useState("All Areas");
 
   useEffect(() => {
     fetchApi<RoutesResponse>("/routes")
@@ -28,14 +30,44 @@ const Page = () => {
       });
   }, []);
 
-  const sidebarRoutes = routes.map((r, idx) => ({
-    number: r.routeNo,
-    route: `${r.from} → ${r.to}`,
-    frequency: `Every ${r.frequency}`,
-    status: r.status,
-    color: r.color || "bg-primary text-white",
-    active: idx === selectedIndex,
-  }));
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+  };
+
+  const handleRouteFilter = (route: string) => {
+    setSelectedRouteFilter(route);
+    if (route !== "All Areas") {
+      const idx = routes.findIndex(
+        (r) => r.routeNo === route || `${r.from} → ${r.to}` === route
+      );
+      if (idx >= 0) setSelectedIndex(idx);
+    }
+  };
+
+  const filteredRoutes = routes.filter((r) => {
+    const matchesSearch =
+      !searchQuery ||
+      r.routeNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.from.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.to.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter =
+      selectedRouteFilter === "All Areas" ||
+      r.routeNo === selectedRouteFilter ||
+      `${r.from} → ${r.to}` === selectedRouteFilter;
+    return matchesSearch && matchesFilter;
+  });
+
+  const sidebarRoutes = filteredRoutes.map((r) => {
+    const idx = routes.indexOf(r);
+    return {
+      number: r.routeNo,
+      route: `${r.from} → ${r.to}`,
+      frequency: `Every ${r.frequency}`,
+      status: r.status,
+      color: r.color || "bg-primary text-white",
+      active: idx === selectedIndex,
+    };
+  });
 
   const activeRoute = routes[selectedIndex];
   const activeCoordinates = activeRoute?.pathCoordinates || [];
@@ -43,7 +75,10 @@ const Page = () => {
 
   return (
     <TrackLayout>
-      <BusSearchHeader 
+      <BusSearchHeader
+        routes={routes}
+        onSearch={handleSearch}
+        onRouteFilter={handleRouteFilter}
         tileFirst="Filter by Areas"
         firstOption="All Areas"
         titleSecond="Sort by"

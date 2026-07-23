@@ -196,6 +196,12 @@ export interface ScheduleData {
 export interface SchedulesResponse {
   success: boolean;
   schedules: ScheduleData[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
 }
 
 export interface NotificationData {
@@ -215,6 +221,12 @@ export interface NotificationData {
 export interface NotificationsResponse {
   success: boolean;
   notifications: NotificationData[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
 }
 
 // Auth types
