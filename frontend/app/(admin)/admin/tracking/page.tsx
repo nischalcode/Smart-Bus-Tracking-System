@@ -13,6 +13,7 @@ import {
   BusData,
   RouteData,
   RoutesResponse,
+  NamedStop,
 } from "@/utils/api";
 import DataTable, { Column } from "@/component/ui/DataTable";
 import PageHeader from "@/component/ui/PageHeader";
@@ -23,6 +24,13 @@ import StatsCard from "@/component/ui/StatsCard";
 import StatusBadge from "@/component/ui/StatusBadge";
 import MapView from "@/component/LiveTracking/MapView";
 import TrackingSidebar from "@/component/admin/TrackingSidebar";
+
+function extractStops(route: RouteData | undefined): NamedStop[] {
+  if (!route?.stops) return [];
+  return route.stops
+    .filter((s) => typeof s.lat === "number" && typeof s.lng === "number")
+    .map((s) => ({ name: s.name, lat: s.lat!, lng: s.lng!, type: s.type }));
+}
 
 const trackingSchema = z.object({
   bus: z.string().min(1, "Bus is required"),
@@ -210,6 +218,7 @@ export default function TrackingPage() {
                 selected ? [selected.latitude, selected.longitude] : routeCoords[0]
               }
               routeCoordinates={routeCoords}
+              namedStops={extractStops(selectedRoute)}
               routeLabel={
                 selectedRoute ? `${selectedRoute.from} → ${selectedRoute.to}` : undefined
               }

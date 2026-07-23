@@ -7,7 +7,14 @@ const MapView = dynamic(() => import("@/component/LiveTracking/MapView"), { ssr:
 import RouteSidebar from "@/component/LiveTracking/RouteSidebar";
 import Stats from "@/component/stats/Stats";
 import TrackLayout from "@/component/track-layout/TrackLayout";
-import { fetchApi, RoutesResponse, RouteData } from "@/utils/api";
+import { fetchApi, RoutesResponse, RouteData, NamedStop } from "@/utils/api";
+
+function extractStops(route: RouteData | undefined): NamedStop[] {
+  if (!route?.stops) return [];
+  return route.stops
+    .filter((s) => typeof s.lat === "number" && typeof s.lng === "number")
+    .map((s) => ({ name: s.name, lat: s.lat!, lng: s.lng!, type: s.type }));
+}
 
 const Page = () => {
   const [routes, setRoutes] = useState<RouteData[]>([]);
@@ -101,6 +108,7 @@ const Page = () => {
         <MapView 
           center={mapCenter} 
           routeCoordinates={activeCoordinates}
+          namedStops={extractStops(activeRoute)}
           routeLabel={activeRoute ? `${activeRoute.from} → ${activeRoute.to}` : undefined}
         />
       </div>

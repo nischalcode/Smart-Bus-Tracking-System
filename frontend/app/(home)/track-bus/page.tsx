@@ -9,6 +9,14 @@ import RouteSidebar from "@/component/LiveTracking/RouteSidebar";
 import Stats from "@/component/stats/Stats";
 import TrackLayout from "@/component/track-layout/TrackLayout";
 import { useLiveTracking } from "@/hooks/useLiveTracking";
+import type { NamedStop } from "@/utils/api";
+
+function extractStops(route: { stops?: { name: string; lat?: number; lng?: number; type?: "start" | "stop" | "end" }[] } | undefined): NamedStop[] {
+  if (!route?.stops) return [];
+  return route.stops
+    .filter((s) => typeof s.lat === "number" && typeof s.lng === "number")
+    .map((s) => ({ name: s.name, lat: s.lat!, lng: s.lng!, type: s.type }));
+}
 
 export default function Page() {
   const { routes, loadingRoutes, trackingByRouteId } = useLiveTracking();
@@ -19,6 +27,7 @@ export default function Page() {
 
   const activeRoute = routes[selectedIndex];
   const activeRouteCoords = activeRoute?.pathCoordinates || [];
+  const activeRouteStops = extractStops(activeRoute);
   const activeTracking = activeRoute
     ? trackingByRouteId.get(activeRoute._id)
     : undefined;
@@ -89,6 +98,7 @@ export default function Page() {
         <MapView
           center={mapCenter}
           routeCoordinates={activeRouteCoords}
+          namedStops={activeRouteStops}
           routeLabel={
             activeRoute ? `${activeRoute.from} → ${activeRoute.to}` : undefined
           }

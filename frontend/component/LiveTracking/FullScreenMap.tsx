@@ -4,12 +4,19 @@ import { useEffect, useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { X, Search } from "lucide-react";
 import { useLiveTracking } from "@/hooks/useLiveTracking";
-import { RouteData } from "@/utils/api";
+import { RouteData, NamedStop } from "@/utils/api";
 
 const MapView = dynamic(() => import("./MapView"), {
   ssr: false,
   loading: () => <div className="h-full w-full bg-gray-100 animate-pulse" />,
 });
+
+function extractStops(route: RouteData | undefined): NamedStop[] {
+  if (!route?.stops) return [];
+  return route.stops
+    .filter((s) => typeof s.lat === "number" && typeof s.lng === "number")
+    .map((s) => ({ name: s.name, lat: s.lat!, lng: s.lng!, type: s.type }));
+}
 
 type FullScreenMapProps = {
   onClose: () => void;
@@ -184,6 +191,7 @@ const FullScreenMap = ({ onClose, initialRouteIndex = 0 }: FullScreenMapProps) =
         <MapView
           center={mapCenter}
           routeCoordinates={activeRouteCoords}
+          namedStops={extractStops(activeRoute)}
           routeLabel={
             activeRoute ? `${activeRoute.from} → ${activeRoute.to}` : undefined
           }

@@ -15,10 +15,17 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { fetchApi, StatsData } from "@/utils/api";
+import { fetchApi, StatsData, NamedStop } from "@/utils/api";
 import LoadingSpinner from "@/component/ui/LoadingSpinner";
 import MapView from "@/component/LiveTracking/MapView";
 import { useLiveTracking } from "@/hooks/useLiveTracking";
+
+function extractStops(route: { stops?: { name: string; lat?: number; lng?: number; type?: "start" | "stop" | "end" }[] } | undefined): NamedStop[] {
+  if (!route?.stops) return [];
+  return route.stops
+    .filter((s) => typeof s.lat === "number" && typeof s.lng === "number")
+    .map((s) => ({ name: s.name, lat: s.lat!, lng: s.lng!, type: s.type }));
+}
 import DashboardCards from "@/component/admin/DashboardCards";
 import QuickActions from "@/component/admin/QuickActions";
 import SystemHealth from "@/component/admin/SystemHealth";
@@ -157,6 +164,7 @@ export default function AdminDashboard() {
           <MapView
             center={mapCenter}
             routeCoordinates={activeRouteCoords}
+            namedStops={extractStops(activeRoute)}
             routeLabel={
               activeRoute ? `${activeRoute.from} → ${activeRoute.to}` : undefined
             }

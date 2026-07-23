@@ -16,7 +16,7 @@ import RouteTimeline from "@/component/features/RouteTimeline";
 import ScheduleHeader from "@/component/head/ScheduleHeader";
 import BusScheduleTable from "@/component/table/BusScheduleTable";
 import TrackLayout from "@/component/track-layout/TrackLayout";
-import { fetchApi, type ScheduleData, type SchedulesResponse } from "@/utils/api";
+import { fetchApi, type ScheduleData, type SchedulesResponse, type NamedStop, type RouteStop } from "@/utils/api";
 
 const MapView = dynamic(() => import("@/component/LiveTracking/MapView"), {
   ssr: false,
@@ -26,6 +26,13 @@ const MapView = dynamic(() => import("@/component/LiveTracking/MapView"), {
     </div>
   ),
 });
+
+function extractStops(stops: RouteStop[] | undefined): NamedStop[] {
+  if (!stops) return [];
+  return stops
+    .filter((s): s is RouteStop & { lat: number; lng: number } => typeof s.lat === "number" && typeof s.lng === "number")
+    .map((s) => ({ name: s.name, lat: s.lat, lng: s.lng, type: s.type }));
+}
 
 const Page = () => {
   const [selected, setSelected] = useState<ScheduleData | null>(null);
@@ -179,6 +186,7 @@ const Page = () => {
               <div className="w-full h-[300px] lg:h-[400px] rounded-2xl border border-gray-200 shadow-md overflow-hidden">
                 <MapView
                   routeCoordinates={route.pathCoordinates || []}
+                  namedStops={extractStops(route.stops)}
                   routeLabel={`Route ${route.routeNo}: ${route.from} → ${route.to}`}
                   fullScreen={false}
                   autoSize={false}

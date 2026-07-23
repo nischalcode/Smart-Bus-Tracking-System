@@ -41,33 +41,43 @@ const LiveTracking = () => {
   const activeTracking = activeRoute
     ? trackingByRouteId.get(activeRoute._id)
     : undefined;
-        console.log("Selected Route:", activeRoute?._id);
-    console.log("Tracking Found:", activeTracking);
-    console.log("Tracking Map:", trackingByRouteId);
 
   useEffect(() => {
-    if (!activeRoute?._id) return;
+    if (!activeRoute?._id) {
+      setNamedStops(
+        (activeRoute?.stops || [])
+          .filter((s) => typeof s.lat === "number" && typeof s.lng === "number")
+          .map((s) => ({ name: s.name, lat: s.lat!, lng: s.lng!, type: s.type }))
+      );
+      return;
+    }
 
     fetchStopsByRoute(activeRoute._id)
       .then((data) => {
-        setNamedStops(data?.stops || []);
+        if (data?.stops && data.stops.length > 0) {
+          setNamedStops(data.stops);
+        } else {
+          setNamedStops(
+            (activeRoute?.stops || [])
+              .filter((s) => typeof s.lat === "number" && typeof s.lng === "number")
+              .map((s) => ({ name: s.name, lat: s.lat!, lng: s.lng!, type: s.type }))
+          );
+        }
       })
-      .catch(console.error);
-  }, [activeRoute?._id]);
+      .catch(() => {
+        setNamedStops(
+          (activeRoute?.stops || [])
+            .filter((s) => typeof s.lat === "number" && typeof s.lng === "number")
+            .map((s) => ({ name: s.name, lat: s.lat!, lng: s.lng!, type: s.type }))
+        );
+      });
+  }, [activeRoute?._id, activeRoute?.stops]);
 
   const mapCenter: [number, number] | undefined = activeTracking
     ? [activeTracking.latitude, activeTracking.longitude]
     : activeRouteCoords.length > 0
     ? activeRouteCoords[0]
     : undefined;
-    console.log("BUS POSITION PROP:", activeTracking
-  ? [activeTracking.latitude, activeTracking.longitude]
-  : undefined
-);console.log(
-  "LIVE BUS:",
-  activeTracking?.latitude,
-  activeTracking?.longitude
-);
 
   return (
     <section className="bg-surface py-12 transition-colors">

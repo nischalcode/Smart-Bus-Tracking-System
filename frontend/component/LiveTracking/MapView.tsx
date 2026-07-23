@@ -6,9 +6,11 @@ import { Home, Minus, Plus } from "lucide-react";
 import {
   MapContainer,
   Marker,
+  CircleMarker,
   Popup,
   Polyline,
   TileLayer,
+  Tooltip,
   useMap,
 } from "react-leaflet";
 import { useEffect, useRef, useState } from "react";
@@ -32,8 +34,6 @@ const FitBounds = ({ positions }: { positions: LatLngExpression[] }) => {
   const map = useMap();
 
   useEffect(() => {
-
-  console.log("FIT BOUNDS RUNNING");
     if (positions.length >= 2) {
       map.fitBounds(positions as any, {
         padding: [40, 40],
@@ -56,8 +56,6 @@ const CenterOnBus = ({
   const map = useMap();
 
   useEffect(() => {
-    
-  console.log("center on bus");
     map.panTo(center);
   }, [center, map]);
 
@@ -134,6 +132,7 @@ interface MapViewProps {
     name: string;
     lat: number;
     lng: number;
+    type?: "start" | "stop" | "end";
   }[];
 
   busPosition?: [number, number];
@@ -162,8 +161,6 @@ const MapView = ({
   autoSize = true,
 }: MapViewProps) => {
   
-console.log("SHOW BUS:", showBus);
-console.log("BUS POSITION:", busPosition);
   useEffect(() => {
     initLeafletIcons();
   }, []);
@@ -180,33 +177,22 @@ console.log("BUS POSITION:", busPosition);
   // Watch Device GPS
   // ==========================
   useEffect(() => {
-    if (!navigator.geolocation) {
-      console.log("Geolocation not supported");
-      return;
-    }
+    if (!navigator.geolocation) return;
 
     watchId.current = navigator.geolocation.watchPosition(
-      (position) => {console.log("GPS UPDATE", [
-      position.coords.latitude,
-      position.coords.longitude,
-    ]);
+      (position) => {
         setDeviceLocation([
           position.coords.latitude,
           position.coords.longitude,
         ]);
       },
-      (error) => {
-        console.error(error);
-      },
+      () => {},
       {
         enableHighAccuracy: true,
         maximumAge: 0,
         timeout: 10000,
       }
     );
-    console.log("MAPVIEW RENDER");
-console.log("deviceLocation", deviceLocation);
-console.log("busPosition", busPosition);
 
     return () => {
       if (watchId.current !== null) {
@@ -291,14 +277,33 @@ console.log("busPosition", busPosition);
           />
         )}
 
-        {namedStops.map((stop, index) => (
-          <Marker
-            key={index}
-            position={[stop.lat, stop.lng]}
-          >
-            <Popup>{stop.name}</Popup>
-          </Marker>
-        ))}
+        {namedStops.map((stop, index) => {
+          const stopType = stop.type || (index === 0 ? "start" : index === namedStops.length - 1 ? "end" : "stop");
+          const color = stopType === "start" ? "#16a34a" : stopType === "end" ? "#dc2626" : "#2563eb";
+          return (
+            <CircleMarker
+              key={`stop-${index}`}
+              center={[stop.lat, stop.lng]}
+              radius={8}
+              pathOptions={{
+                color: color,
+                fillColor: color,
+                fillOpacity: 1,
+                weight: 3,
+              }}
+            >
+              <Popup>
+                <div style={{ fontSize: "13px" }}>
+                  <strong>{stop.name}</strong><br />
+                  <span style={{ textTransform: "capitalize", color: "#6b7280" }}>{stopType} stop</span>
+                </div>
+              </Popup>
+              <Tooltip permanent direction="top" offset={[0, -10]}>
+                <span style={{ fontWeight: 700, fontSize: "11px" }}>{stop.name}</span>
+              </Tooltip>
+            </CircleMarker>
+          );
+        })}
         {showBus && busPosition && (
         <Marker
           key={busKey}

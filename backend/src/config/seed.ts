@@ -10,7 +10,8 @@ export const seedDatabase = async (): Promise<void> => {
   try {
     const routeCount = await RouteModel.countDocuments({});
     if (routeCount > 0) {
-      console.log("Database already seeded. Skipping seeder.");
+      console.log("Database already seeded. Patching stops with coordinates if missing...");
+      await patchRouteStops();
       return;
     }
 
@@ -45,10 +46,10 @@ export const seedDatabase = async (): Promise<void> => {
       color: "bg-green-600 text-white",
       active: true,
       stops: [
-        { name: "City Center", timeOffset: 0, type: "start" },
-        { name: "Green Street", timeOffset: 5, type: "stop" },
-        { name: "River View", timeOffset: 12, type: "stop" },
-        { name: "Airport", timeOffset: 25, type: "end" },
+        { name: "City Center", lat: 27.7172, lng: 85.324, timeOffset: 0, type: "start" },
+        { name: "Green Street", lat: 27.7205, lng: 85.329, timeOffset: 5, type: "stop" },
+        { name: "River View", lat: 27.724, lng: 85.334, timeOffset: 12, type: "stop" },
+        { name: "Airport", lat: 27.727, lng: 85.341, timeOffset: 25, type: "end" },
       ],
       pathCoordinates: [
         [27.7172, 85.324],
@@ -71,9 +72,9 @@ export const seedDatabase = async (): Promise<void> => {
       color: "bg-blue-100 text-blue-600",
       active: true,
       stops: [
-        { name: "Central Park", timeOffset: 0, type: "start" },
-        { name: "River View", timeOffset: 8, type: "stop" },
-        { name: "Tech Hub", timeOffset: 20, type: "end" },
+        { name: "Central Park", lat: 27.710, lng: 85.315, timeOffset: 0, type: "start" },
+        { name: "River View", lat: 27.720, lng: 85.328, timeOffset: 8, type: "stop" },
+        { name: "Tech Hub", lat: 27.730, lng: 85.350, timeOffset: 20, type: "end" },
       ],
       pathCoordinates: [
         [27.710, 85.315],
@@ -95,9 +96,9 @@ export const seedDatabase = async (): Promise<void> => {
       color: "bg-purple-100 text-purple-600",
       active: true,
       stops: [
-        { name: "Railway Station", timeOffset: 0, type: "start" },
-        { name: "Lake Park", timeOffset: 7, type: "stop" },
-        { name: "City Center", timeOffset: 15, type: "end" },
+        { name: "Railway Station", lat: 27.700, lng: 85.300, timeOffset: 0, type: "start" },
+        { name: "Lake Park", lat: 27.710, lng: 85.310, timeOffset: 7, type: "stop" },
+        { name: "City Center", lat: 27.7172, lng: 85.324, timeOffset: 15, type: "end" },
       ],
       pathCoordinates: [
         [27.700, 85.300],
@@ -118,9 +119,9 @@ export const seedDatabase = async (): Promise<void> => {
       color: "bg-orange-100 text-orange-600",
       active: true,
       stops: [
-        { name: "University", timeOffset: 0, type: "start" },
-        { name: "Airport Road", timeOffset: 10, type: "stop" },
-        { name: "Market Street", timeOffset: 20, type: "end" },
+        { name: "University", lat: 27.680, lng: 85.320, timeOffset: 0, type: "start" },
+        { name: "Airport Road", lat: 27.700, lng: 85.330, timeOffset: 10, type: "stop" },
+        { name: "Market Street", lat: 27.720, lng: 85.320, timeOffset: 20, type: "end" },
       ],
       pathCoordinates: [
         [27.680, 85.320],
@@ -319,5 +320,51 @@ export const seedDatabase = async (): Promise<void> => {
     console.log("Database seeded successfully!");
   } catch (error: any) {
     console.error("Database seeding failed:", error.message);
+  }
+};
+
+const patchCoordinates: Record<string, { name: string; lat: number; lng: number }[]> = {
+  "12A": [
+    { name: "City Center", lat: 27.7172, lng: 85.324 },
+    { name: "Green Street", lat: 27.7205, lng: 85.329 },
+    { name: "River View", lat: 27.724, lng: 85.334 },
+    { name: "Airport", lat: 27.727, lng: 85.341 },
+  ],
+  "7B": [
+    { name: "Central Park", lat: 27.710, lng: 85.315 },
+    { name: "River View", lat: 27.720, lng: 85.328 },
+    { name: "Tech Hub", lat: 27.730, lng: 85.350 },
+  ],
+  "9C": [
+    { name: "Railway Station", lat: 27.700, lng: 85.300 },
+    { name: "Lake Park", lat: 27.710, lng: 85.310 },
+    { name: "City Center", lat: 27.7172, lng: 85.324 },
+  ],
+  "4D": [
+    { name: "University", lat: 27.680, lng: 85.320 },
+    { name: "Airport Road", lat: 27.700, lng: 85.330 },
+    { name: "Market Street", lat: 27.720, lng: 85.320 },
+  ],
+};
+
+const patchRouteStops = async () => {
+  for (const [routeNo, coords] of Object.entries(patchCoordinates)) {
+    const route = await RouteModel.findOne({ routeNo });
+    if (!route) continue;
+
+    const needsPatch = route.stops.some(
+      (s) => s.lat === undefined || s.lng === undefined || (s.lat === 0 && s.lng === 0)
+    );
+    if (!needsPatch) continue;
+
+    for (const stop of route.stops) {
+      const match = coords.find((c) => c.name === stop.name);
+      if (match) {
+        stop.lat = match.lat;
+        stop.lng = match.lng;
+      }
+    }
+    await route.save();
+    console.log(`Patched coordinates for route ${routeNo}`);
   }
 };
