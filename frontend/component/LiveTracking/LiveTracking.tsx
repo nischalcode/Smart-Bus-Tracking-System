@@ -42,10 +42,7 @@ const LiveTracking = () => {
   const activeTracking = activeRoute
     ? trackingByRouteId.get(activeRoute._id)
     : undefined;
-        console.log("Selected Route:", activeRoute?._id);
-    console.log("Tracking Found:", activeTracking);
-    console.log("Tracking Map:", trackingByRouteId);
-
+       
   useEffect(() => {
     if (!activeRoute?._id) return;
 
@@ -61,14 +58,7 @@ const LiveTracking = () => {
     : activeRouteCoords.length > 0
     ? activeRouteCoords[0]
     : undefined;
-    console.log("BUS POSITION PROP:", activeTracking
-  ? [activeTracking.latitude, activeTracking.longitude]
-  : undefined
-);console.log(
-  "LIVE BUS:",
-  activeTracking?.latitude,
-  activeTracking?.longitude
-);
+    
 
   return (
     <section className="bg-surface py-12 transition-colors">
@@ -105,7 +95,7 @@ const LiveTracking = () => {
                 ? [activeTracking.latitude, activeTracking.longitude]
                 : undefined
             }
-            busName={activeTracking?.bus?.busNumber || 'Bus'}
+            busName={`Bus ${activeTracking?.busNo || ''}`}
             speed={activeTracking?.speed}
             eta={activeTracking?.eta}
             nextStop={activeTracking?.nextStop}
