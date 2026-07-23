@@ -252,12 +252,12 @@ console.log("busPosition", busPosition);
 
   return (
     <div
-      className={`relative z-0 overflow-hidden h-full w-full ${
+      className={`relative z-0 overflow-hidden ${
         fullScreen
-          ? ""
+          ? "h-full w-full"
           : autoSize
-            ? "h-150 rounded-2xl border shadow lg:w-2/3"
-            : ""
+            ? "h-150 w-full rounded-2xl border shadow lg:w-2/3"
+            : "h-full w-full"
       }`}
     >
       <MapContainer
