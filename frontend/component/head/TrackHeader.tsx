@@ -1,12 +1,11 @@
 "use client";
 
-import Image from "next/image";
-import { Bell, ChevronDown, Menu, X } from "lucide-react";
+import { Bell, Menu, X } from "lucide-react";
 import { headerConfig } from "./headerConfig";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { fetchApi, NotificationsResponse } from "@/utils/api";
-import { useAuth } from "@/context/AuthContext";
+import PublicActions from "@/component/head/HeaderActions/PublicActions";
 
 type Props = {
   onMenuToggle?: () => void;
@@ -15,7 +14,7 @@ type Props = {
 const TrackHeader = ({ onMenuToggle }: Props) => {
   const router = useRouter();
   const pathname = usePathname();
-  const { user } = useAuth();
+  // const { user } = useAuth();
   const page =
     headerConfig[pathname as keyof typeof headerConfig] ?? {
       title: "Dashboard",
@@ -75,59 +74,24 @@ const TrackHeader = ({ onMenuToggle }: Props) => {
       </div>
 
       <div className="flex items-center gap-4 sm:gap-6">
-        <button
-          onClick={() => router.push("/notifications")}
-          className="relative"
-          aria-label="Notifications"
-        >
-          <Bell className="h-6 w-6 text-gray-600 hover:text-black" />
-          {notificationCount > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
-              {notificationCount}
-            </span>
-          )}
-        </button>
 
-        {user ? (
-          <div className="flex cursor-pointer items-center gap-3">
-            <div className="relative h-9 w-9 overflow-hidden rounded-full bg-gray-200">
-              {/* Fixed type error line below by safely casting to any */}
-              {(user as any).avatar ? (
-                <Image
-                  src={(user as any).avatar}
-                  alt={user.name || "User profile"}
-                  width={36}
-                  height={36}
-                  className="rounded-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-primary text-sm font-bold text-white">
-                  {user.name?.charAt(0).toUpperCase() || "U"}
-                </div>
-              )}
-            </div>
+        <div className="flex items-center gap-4 sm:gap-6">
+          <button
+            onClick={() => router.push("/notifications")}
+            className="relative"
+            aria-label="Notifications"
+          >
+            <Bell className="h-6 w-6 text-gray-600 hover:text-black" />
 
-            <div className="hidden text-sm sm:block">
-              <p>
-                <span className="text-gray-500">Hi, </span>
-                <span className="font-semibold text-gray-900">
-                  {user.name}
-                </span>
-              </p>
-            </div>
+            {notificationCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
+                {notificationCount}
+              </span>
+            )}
+          </button>
 
-            <ChevronDown className="hidden h-4 w-4 text-gray-500 sm:block" />
-          </div>
-        ) : (
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push("/login")}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
-            >
-              Sign In
-            </button>
-          </div>
-        )}
+          <PublicActions />
+        </div>      
       </div>
     </header>
   );

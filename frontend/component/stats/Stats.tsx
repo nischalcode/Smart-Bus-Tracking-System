@@ -39,22 +39,22 @@ const Stats = () => {
   const stats = [
     {
       value: statsData.activeBuses,
-      label: t("home.stats.active_buses"),
+      label: t("stats.active_buses"),
       icon: Bus,
     },
     {
       value: statsData.totalRoutes,
-      label: t("home.stats.routes"),
+      label: t("stats.routes"),
       icon: Route,
     },
     {
       value: statsData.activeTracking,
-      label: t("home.stats.live_tracking"),
+      label: t("stats.live_tracking"),
       icon: Users,
     },
     {
       value: statsData.onTimePerformance,
-      label: t("home.stats.on_time_performance"),
+      label: t("stats.on_time_performance"),
       icon: Clock3,
     },
   ];

@@ -6,12 +6,13 @@ import Link from "next/link";
 import ThemeToggle from "@/component/ui/ThemeToggle";
 import LanguageSwitcher from "@/component/ui/LanguageSwitcher";
 import { useLanguage } from "@/context/LanguageContext";
+import PublicActions from "./HeaderActions/PublicActions";
 
 const Header = () => {
   const { t } = useLanguage();
 
   return (
-    <header className="sticky top-0 z-[9999] flex items-center justify-between border-b border-border bg-background px-6 py-4 transition-colors">
+    <header className="sticky top-0 z-9999 flex items-center justify-between border-b border-border bg-background px-6 py-4 transition-colors">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
           <Image
@@ -25,7 +26,7 @@ const Header = () => {
         </div>
         <div className="flex flex-col">
           <h1 className="text-xl font-bold leading-tight dark:text-white">
-            <span>Smart </span>
+            <span className="text-primary">Smart </span>
             <span className="text-primary">Bus</span>
           </h1>
           <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -74,20 +75,7 @@ const Header = () => {
       </nav>
       
       <div className="flex items-center gap-4">
-        <LanguageSwitcher />
-        <ThemeToggle />
-        <Link
-          href="/login"
-          className="text-foreground hover:bg-surface rounded-lg border border-border px-5 py-2 text-sm font-medium transition-colors"
-        >
-          {t("nav.login")}
-        </Link>
-        <Link
-          href="/register"
-          className="bg-primary hover:bg-primary/90 rounded-lg px-5 py-2 text-sm font-medium text-white transition-colors"
-        >
-          {t("nav.signup")}
-        </Link>
+        <PublicActions/>
       </div>
     </header>
   );

@@ -96,7 +96,7 @@ const RouteTimeline = ({ stops, firstBus = "05:30 AM" }: Props) => {
           </div>
         ))}
 
-        <div className="ml-[7px] mt-1 flex flex-col gap-1">
+        <div className="ml-1.75 mt-1 flex flex-col gap-1">
           <div className="h-1 w-1 rounded-full bg-gray-300"></div>
           <div className="h-1 w-1 rounded-full bg-gray-300"></div>
           <div className="h-1 w-1 rounded-full bg-gray-300"></div>
