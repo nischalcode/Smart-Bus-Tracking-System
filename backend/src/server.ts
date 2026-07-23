@@ -2,7 +2,7 @@ import http from "http";
 import app from "./app.js";
 import "./config/mongodb.js";
 import { seedDatabase } from "./config/seed.js";
-import { startTrackingSimulation } from "./modules/tracking/TrackingSimulator.js";
+//import { startTrackingSimulation } from "./modules/tracking/TrackingSimulator.js";
 import { initializeSocket } from "./socket/index.js";
 
 const server = http.createServer(app);
@@ -17,7 +17,7 @@ const startServer = async () => {
   await seedDatabase();
 
   // Start live GPS tracking simulator
-  startTrackingSimulation();
+  //startTrackingSimulation();
 
   server.listen(PORT, () => {
     console.log(`Server is running on port:${PORT}`);

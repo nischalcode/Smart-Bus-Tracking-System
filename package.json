@@ -3,5 +3,8 @@
   "private": true,
   "scripts": {
     "build": "pnpm --filter frontend build"
+  },
+  "dependencies": {
+    "next-auth": "^4.24.15"
   }
 }

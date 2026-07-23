@@ -1,12 +1,42 @@
 import TrackingModel from "./TrackingModel.js";
 import { getIO } from "../../socket/index.js";
+// backend/src/modules/tracking/TrackingModel.ts
 
+import { Schema, model } from "mongoose";
+
+const trackingSchema = new Schema(
+  {
+    driverId: { type: String, required: true },
+    driverName: { type: String, required: true },
+    busId: { type: Schema.Types.ObjectId, ref: "Bus", required: true },
+    busNo: { type: String, required: true },
+    routeId: { type: Schema.Types.ObjectId, ref: "Route", required: true },
+    routeName: { type: String, required: true },
+    direction: { type: String, enum: ["Going", "Coming"], default: "Going" },
+    latitude: { type: Number, required: true },
+    longitude: { type: Number, required: true },
+    accuracy: { type: Number, default: 0 },
+    speed: { type: Number, default: 0 },
+    timestamp: { type: Date, default: Date.now },
+    bus: { type: Schema.Types.ObjectId, ref: "Bus" },
+    route: { type: Schema.Types.ObjectId, ref: "Route" },
+    status: { type: String, default: "Live" },
+    
+    // 👇 ADD THESE THREE MISSING FIELDS 👇
+    currentIndex: { type: Number, default: 0 },
+    eta: { type: String },
+    nextStop: { type: String },
+  },
+  { timestamps: true }
+);
+
+// ... rest of the file
 export const startTrackingSimulation = (): void => {
   console.log("Initializing GPS Live Tracking Simulator...");
 
   setInterval(async () => {
     try {
-      const trackingRecords = await TrackingModel.find({}).populate("route");
+      const trackingRecords = await TrackingModel.find({}).populate("route"); 
 
       const bulkOps: any[] = [];
 
