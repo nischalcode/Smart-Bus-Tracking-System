@@ -174,8 +174,18 @@ export interface TrackingData {
   nextStop?: string;
   eta?: string;
   status: string;
-  currentIndex: number;
-}
+  timestamp?: string;
+  createdAt?: string;
+  updatedAt?: string;
+
+  busId?: string;
+  busNo?: string;
+
+  routeId?: string;
+  routeName?: string;
+
+  currentIndex?: number;
+  }
 
 export interface TrackingResponse {
   success: boolean;

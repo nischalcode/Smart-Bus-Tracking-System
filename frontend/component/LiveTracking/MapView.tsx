@@ -33,7 +33,6 @@ const FitBounds = ({ positions }: { positions: LatLngExpression[] }) => {
 
   useEffect(() => {
 
-  console.log("FIT BOUNDS RUNNING");
     if (positions.length >= 2) {
       map.fitBounds(positions as any, {
         padding: [40, 40],
@@ -57,7 +56,6 @@ const CenterOnBus = ({
 
   useEffect(() => {
     
-  console.log("center on bus");
     map.panTo(center);
   }, [center, map]);
 
@@ -160,8 +158,6 @@ const MapView = ({
   fullScreen = false,
 }: MapViewProps) => {
   
-console.log("SHOW BUS:", showBus);
-console.log("BUS POSITION:", busPosition);
   useEffect(() => {
     initLeafletIcons();
   }, []);
@@ -202,9 +198,6 @@ console.log("BUS POSITION:", busPosition);
         timeout: 10000,
       }
     );
-    console.log("MAPVIEW RENDER");
-console.log("deviceLocation", deviceLocation);
-console.log("busPosition", busPosition);
 
     return () => {
       if (watchId.current !== null) {
@@ -296,6 +289,8 @@ console.log("busPosition", busPosition);
           </Marker>
         ))}
         {showBus && busPosition && (
+          <>
+          
         <Marker
           key={busKey}
           position={busPosition}
@@ -309,6 +304,7 @@ console.log("busPosition", busPosition);
             </div>
           </Popup>
         </Marker>
+        </>
         )}
           
         
