@@ -230,7 +230,7 @@ const MapView = ({
       className={`relative z-0 overflow-hidden ${
         fullScreen
           ? "h-full w-full"
-          : "h-[600px] w-full rounded-2xl border shadow lg:w-2/3"
+          : "h-150 w-full rounded-2xl border shadow lg:w-2/3"
       }`}
     >
       <MapContainer

@@ -9,18 +9,18 @@ const HeroSection = () => {
    const { t } = useLanguage();
    
   return (
-    <section className="relative flex min-h-[850px] items-center overflow-hidden px-8 py-20 lg:px-16 bg-background transition-colors">
+    <section className="relative flex min-h-170 items-center overflow-hidden px-8 py-20 lg:px-16  transition-colors">
       
       <div className="absolute inset-0 -z-10 ">
         <Image
           src="/hero.png"
           alt="City with Bus"
           fill
-          className="object-cover object-right opacity-90 dark:opacity-80"
+          className="object-cover object-bottom-right opacity-90 dark:opacity-80"
           priority
         />
 
-        <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-white/40 to-transparent dark:from-black/75 dark:via-black/40"></div>
+        <div className="absolute inset-0 bg-linear-to-r from-white/35 via-white/15 to-transparent dark:from-black/75 dark:via-black/45"></div>
       </div>
 
     

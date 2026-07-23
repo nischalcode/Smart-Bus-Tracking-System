@@ -63,7 +63,7 @@ const LiveTracking = () => {
       <div className="mx-auto max-w-7xl px-6">
         <div className="flex flex-col gap-8 lg:flex-row">
           {loadingRoutes ? (
-            <div className="flex h-[600px] w-full items-center justify-center rounded-2xl bg-card shadow-md lg:w-1/3 animate-pulse">
+            <div className="flex h-150 w-full items-center justify-center rounded-2xl bg-card shadow-md lg:w-1/3 animate-pulse">
               <span className="text-gray-500 font-medium">
                 {t('common.loading')}
               </span>
