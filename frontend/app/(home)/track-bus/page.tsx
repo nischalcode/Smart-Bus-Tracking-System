@@ -72,7 +72,7 @@ export default function Page() {
       />
       <div className="flex flex-col gap-4 p-5 lg:flex-row">
         {loadingRoutes ? (
-          <div className="flex h-150 w-full items-center justify-center rounded-2xl bg-white shadow-md lg:w-1/3 animate-pulse">
+          <div className="flex h-[600px] w-full items-center justify-center rounded-2xl bg-white shadow-md lg:w-1/3 animate-pulse">
             <span className="text-gray-500 font-medium">Loading Routes...</span>
           </div>
         ) : (
@@ -86,23 +86,25 @@ export default function Page() {
           />
         )}
 
-        <MapView
-          center={mapCenter}
-          routeCoordinates={activeRouteCoords}
-          routeLabel={
-            activeRoute ? `${activeRoute.from} → ${activeRoute.to}` : undefined
-          }
-          showBus={!!activeTracking}
-          busPosition={
-            activeTracking
-              ? [activeTracking.latitude, activeTracking.longitude]
-              : undefined
-          }
-          busName={activeTracking?.bus?.busNumber || "Bus"}
-          speed={activeTracking?.speed}
-          eta={activeTracking?.eta}
-          nextStop={activeTracking?.nextStop}
-        />
+        <div className="w-full lg:w-2/3 h-[600px]">
+          <MapView
+            center={mapCenter}
+            routeCoordinates={activeRouteCoords}
+            routeLabel={
+              activeRoute ? `${activeRoute.from} → ${activeRoute.to}` : undefined
+            }
+            showBus={!!activeTracking}
+            busPosition={
+              activeTracking
+                ? [activeTracking.latitude, activeTracking.longitude]
+                : undefined
+            }
+            busName={activeTracking?.bus?.busNumber || "Bus"}
+            speed={activeTracking?.speed}
+            eta={activeTracking?.eta}
+            nextStop={activeTracking?.nextStop}
+          />
+        </div>
       </div>
 
       <Stats />

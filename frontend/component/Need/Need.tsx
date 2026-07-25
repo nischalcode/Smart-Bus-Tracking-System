@@ -41,7 +41,7 @@ const WhyChoose = () => {
       <div className="mx-auto flex flex-col lg:flex-row items-center gap-16">
        
         <div className="w-full lg:w-1/2 p-10">
-          <h2 className="text-3xl lg:text-4xl font-bold mb-2 dark:text-white">
+          <h2 className="text-3xl lg:text-4xl font-bold mb-2 dark:text-primary">
             {t("why_choose.title")}
           </h2>
 
@@ -58,7 +58,7 @@ const WhyChoose = () => {
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-bold mb-2 dark:text-white">
+                    <h4 className="text-sm font-bold mb-2 dark:text-primary">
                       {t(feature.title)}
                     </h4>
 
@@ -76,7 +76,7 @@ const WhyChoose = () => {
         <div className="w-full lg:w-1/2 flex justify-center relative">
           <div className="relative w-75 h-137.5 overflow-visible">
            
-            <div className="absolute inset-0 bg-white rounded-[40px] border-8 border-gray-900 shadow-2xl overflow-hidden">
+            <div className="absolute inset-0 bg-white rounded-[40px] border-8 border-gray-900 shadow-2xl overflow-visible">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-2xl"></div>
 
               <div className="relative h-full bg-gray-100">
@@ -102,7 +102,7 @@ const WhyChoose = () => {
                       [27.724, 85.334],
                     ]}
                     pathOptions={{
-                      color: "#22c55e",
+                      color: "#22c55e", 
                       weight: 5,
                     }}
                   />

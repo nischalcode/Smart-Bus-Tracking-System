@@ -53,7 +53,9 @@
     "on_time": "On Time",
     "eta": "ETA",
     "speed": "Speed",
-    "next_stop": "Next Stop"
+    "next_stop": "Next Stop",
+    "no_routes": "No routes found",
+    "view_all_routes": "View All Routes"
   },
   "stats": {
     "active_buses": "Active Buses",

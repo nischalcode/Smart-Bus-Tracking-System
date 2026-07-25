@@ -175,6 +175,7 @@ export interface TrackingData {
   eta?: string;
   status: string;
   currentIndex: number;
+  driverName?: string;
 }
 
 export interface TrackingResponse {

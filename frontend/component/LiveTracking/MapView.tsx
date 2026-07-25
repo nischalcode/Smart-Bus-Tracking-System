@@ -24,6 +24,7 @@ const busIcon = L.divIcon({
   `,
   className: "",
   iconSize: [30, 30],
+  iconAnchor: [15, 15],
 });
 // ==========================
 // Fit Route
@@ -32,8 +33,6 @@ const FitBounds = ({ positions }: { positions: LatLngExpression[] }) => {
   const map = useMap();
 
   useEffect(() => {
-
-  console.log("FIT BOUNDS RUNNING");
     if (positions.length >= 2) {
       map.fitBounds(positions as any, {
         padding: [40, 40],
@@ -56,8 +55,6 @@ const CenterOnBus = ({
   const map = useMap();
 
   useEffect(() => {
-    
-  console.log("center on bus");
     map.panTo(center);
   }, [center, map]);
 
@@ -99,17 +96,17 @@ const ZoomControls = ({
   const map = useMap();
 
   return (
-    <div className="absolute bottom-6 right-6 z-20 flex flex-col gap-2">
+    <div className="absolute bottom-6 right-6 z-[1000] flex flex-col gap-2">
       <button
         onClick={() => map.zoomIn()}
-        className="rounded-lg bg-white p-2 shadow hover:bg-gray-100"
+        className="rounded-lg bg-card text-card-foreground p-2 shadow hover:bg-muted"
       >
         <Plus size={18} />
       </button>
 
       <button
         onClick={() => map.zoomOut()}
-        className="rounded-lg bg-white p-2 shadow hover:bg-gray-100"
+        className="rounded-lg bg-card text-card-foreground p-2 shadow hover:bg-muted"
       >
         <Minus size={18} />
       </button>
@@ -118,7 +115,7 @@ const ZoomControls = ({
         onClick={() =>
           map.flyTo(deviceLocation ?? defaultCenter, 16)
         }
-        className="rounded-lg bg-white p-2 shadow hover:bg-gray-100"
+        className="rounded-lg bg-card text-card-foreground p-2 shadow hover:bg-muted"
       >
         <Home size={18} />
       </button>
@@ -158,10 +155,9 @@ const MapView = ({
   nextStop = "N/A",
   showBus = false,
   fullScreen = false,
+  // className = "",
 }: MapViewProps) => {
   
-console.log("SHOW BUS:", showBus);
-console.log("BUS POSITION:", busPosition);
   useEffect(() => {
     initLeafletIcons();
   }, []);
@@ -184,17 +180,14 @@ console.log("BUS POSITION:", busPosition);
     }
 
     watchId.current = navigator.geolocation.watchPosition(
-      (position) => {console.log("GPS UPDATE", [
-      position.coords.latitude,
-      position.coords.longitude,
-    ]);
+      (position) => {
         setDeviceLocation([
           position.coords.latitude,
           position.coords.longitude,
         ]);
       },
       (error) => {
-        console.error(error);
+        console.warn("Geolocation error:", error.message || error);
       },
       {
         enableHighAccuracy: true,
@@ -202,9 +195,6 @@ console.log("BUS POSITION:", busPosition);
         timeout: 10000,
       }
     );
-    console.log("MAPVIEW RENDER");
-console.log("deviceLocation", deviceLocation);
-console.log("busPosition", busPosition);
 
     return () => {
       if (watchId.current !== null) {
@@ -250,11 +240,10 @@ console.log("busPosition", busPosition);
 
   return (
     <div
-      className={`relative z-0 overflow-hidden ${
-        fullScreen
-          ? "h-full w-full"
-          : "h-150 w-full rounded-2xl border shadow lg:w-2/3"
+      className={`relative overflow-hidden rounded-2xl border shadow ${
+        fullScreen ? "h-full w-full" : "h-full w-full min-h-[400px]"
       }`}
+      style={{ height: "100%", width: "100%" }}
     >
       <MapContainer
         center={center}
@@ -335,28 +324,28 @@ console.log("busPosition", busPosition);
         )}
       </MapContainer>
       {deviceLocation && (
-        <div className="absolute left-5 bottom-5 z-20 w-72 rounded-xl bg-white p-4 shadow-xl border">
+        <div className="absolute left-5 bottom-5 z-20 w-72 rounded-xl bg-card text-card-foreground p-4 shadow-xl border">
           <div className="flex items-center justify-between">
             <h2 className="font-bold text-lg">
               📍 Current Device Location
             </h2>
 
-            <span className="text-green-600 font-semibold text-sm">
+            <span className="text-success font-semibold text-sm">
               LIVE
             </span>
           </div>
 
-          <div className="mt-3 space-y-2 text-sm">
+          <div className="mt-3 space-y-2 text-sm text-muted-foreground">
             <div className="flex justify-between">
               <span>Latitude</span>
-              <span className="font-medium">
+              <span className="font-medium text-foreground">
                 {deviceLocation[0].toFixed(6)}
               </span>
             </div>
 
             <div className="flex justify-between">
               <span>Longitude</span>
-              <span className="font-medium">
+              <span className="font-medium text-foreground">
                 {deviceLocation[1].toFixed(6)}
               </span>
             </div>
@@ -365,9 +354,9 @@ console.log("busPosition", busPosition);
       )}
 
       {showBus && (
-        <div className="absolute left-5 top-5 z-20 w-64 rounded-xl bg-white p-4 shadow-xl">
+        <div className="absolute left-5 top-5 z-20 w-64 rounded-xl bg-card text-card-foreground p-4 shadow-xl border">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-bold">{busName}</h2>
+            <h2 className="font-bold text-foreground">{busName}</h2>
 
             <span className="flex items-center gap-1 text-xs font-semibold text-primary">
               <span className="h-2 w-2 animate-pulse rounded-full bg-primary"></span>
@@ -375,24 +364,24 @@ console.log("busPosition", busPosition);
             </span>
           </div>
 
-          <p className="mb-2 text-sm text-gray-500">
+          <p className="mb-2 text-sm text-muted-foreground">
             {routeLabel}
           </p>
 
-          <div className="space-y-2 text-sm">
+          <div className="space-y-2 text-sm text-muted-foreground">
             <div className="flex justify-between">
               <span>Next Stop</span>
-              <span>{nextStop}</span>
+              <span className="text-foreground">{nextStop}</span>
             </div>
 
             <div className="flex justify-between">
               <span>Status</span>
-              <span>{eta}</span>
+              <span className="text-foreground">{eta}</span>
             </div>
 
             <div className="flex justify-between">
               <span>Speed</span>
-              <span>{speed} km/h</span>
+              <span className="text-foreground">{speed} km/h</span>
             </div>
           </div>
         </div>

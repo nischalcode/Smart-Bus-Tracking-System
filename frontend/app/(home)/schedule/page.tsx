@@ -30,6 +30,8 @@ const MapView = dynamic(() => import("@/component/LiveTracking/MapView"), {
 const Page = () => {
   const [selected, setSelected] = useState<ScheduleData | null>(null);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const[showAll, setShowAll] = useState(false);
+  // const visibleMembers = showAll ? : teamMembers.slice(0,3);
 
   function handleSelect(schedule: ScheduleData) {
     setSelected((prev) => (prev?._id === schedule._id ? null : schedule));

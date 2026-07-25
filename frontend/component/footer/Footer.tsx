@@ -26,7 +26,7 @@ const Footer = () => {
                   className="h-6 w-6"
                 />
               </div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-primary-strong">
                 Smart <span className="text-primary">Bus</span>
               </h2>
             </div>

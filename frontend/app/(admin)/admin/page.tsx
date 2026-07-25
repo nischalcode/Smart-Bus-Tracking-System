@@ -13,13 +13,18 @@ import {
   Shield,
   Calendar,
   TrendingUp,
+  Gauge,
+  Navigation,
+  User,
+  Bell,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { fetchApi, StatsData } from "@/utils/api";
+import { fetchApi, StatsData, NotificationData, NotificationsResponse } from "@/utils/api";
 import LoadingSpinner from "@/component/ui/LoadingSpinner";
 import MapView from "@/component/LiveTracking/MapView";
 import { useLiveTracking } from "@/hooks/useLiveTracking";
 import DashboardCards from "@/component/admin/DashboardCards";
+import AnalyticsCharts from "@/component/admin/AnalyticsCharts";
 import QuickActions from "@/component/admin/QuickActions";
 import SystemHealth from "@/component/admin/SystemHealth";
 import RealtimeLogs from "@/component/admin/RealtimeLogs";
@@ -27,13 +32,20 @@ import RealtimeLogs from "@/component/admin/RealtimeLogs";
 export default function AdminDashboard() {
   const { token, user } = useAuth();
   const [stats, setStats] = useState<StatsData["stats"] | null>(null);
+  const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [loading, setLoading] = useState(true);
   const { routes, trackingByRouteId, tracking } = useLiveTracking();
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
   useEffect(() => {
-    fetchApi<StatsData>("/dashboard/stats", {}, token ?? undefined)
-      .then((res) => setStats(res.stats))
+    Promise.all([
+      fetchApi<StatsData>("/dashboard/stats", {}, token ?? undefined),
+      fetchApi<NotificationsResponse>("/notifications?limit=5", {}, token ?? undefined),
+    ])
+      .then(([statsRes, notifRes]) => {
+        setStats(statsRes.stats);
+        setNotifications(notifRes.notifications || []);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [token]);
@@ -173,48 +185,125 @@ export default function AdminDashboard() {
           />
         </div>
 
-        <div className="flex flex-col items-start justify-between gap-4 p-6 sm:flex-row sm:items-center">
-          <div>
-            <p className="text-sm text-sidebar-muted">Current Focus</p>
-            <h2 className="text-2xl font-bold">
-              {activeRoute ? `${activeRoute.from} → ${activeRoute.to}` : "Kathmandu Valley Routes"}
-            </h2>
-            <p className="mt-1 flex items-center gap-1.5 text-accent">
-              <span className="live-dot h-2 w-2 rounded-full bg-accent" />
-              {tracking.length} vehicle{tracking.length === 1 ? "" : "s"} active • On-time
-            </p>
+        <div className="p-6">
+          <div className="flex flex-col items-start justify-between gap-4 border-b border-white/10 pb-6 sm:flex-row sm:items-center">
+            <div>
+              <p className="text-sm text-sidebar-muted">Current Focus</p>
+              <h2 className="text-2xl font-bold">
+                {activeRoute ? `${activeRoute.from} → ${activeRoute.to}` : "Kathmandu Valley Routes"}
+              </h2>
+              <p className="mt-1 flex items-center gap-1.5 text-accent">
+                <span className="live-dot h-2 w-2 rounded-full bg-accent" />
+                {tracking.length} vehicle{tracking.length === 1 ? "" : "s"} active • On-time
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {routes.slice(0, 5).map((r, idx) => (
+                <button
+                  key={r._id}
+                  onClick={() => setSelectedIndex(idx)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    idx === selectedIndex
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-white/5 text-sidebar-muted hover:bg-white/10"
+                  }`}
+                >
+                  {r.routeNo}
+                </button>
+              ))}
+              <Link
+                href="/admin/tracking"
+                className="rounded-xl bg-accent px-5 py-2 text-sm font-semibold text-accent-foreground transition hover:brightness-110"
+              >
+                View Details
+              </Link>
+            </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {routes.slice(0, 5).map((r, idx) => (
-              <button
-                key={r._id}
-                onClick={() => setSelectedIndex(idx)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  idx === selectedIndex
-                    ? "bg-accent text-accent-foreground"
-                    : "bg-white/5 text-sidebar-muted hover:bg-white/10"
-                }`}
-              >
-                {r.routeNo}
-              </button>
-            ))}
-            <Link
-              href="/admin/tracking"
-              className="rounded-xl bg-accent px-5 py-2 text-sm font-semibold text-accent-foreground transition hover:brightness-110"
-            >
-              View Details
-            </Link>
-          </div>
+          {/* New Active Route details section */}
+          {activeRoute && (
+            <div className="mt-6 grid gap-6 md:grid-cols-3">
+              <div className="space-y-2 rounded-xl bg-white/5 p-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-sidebar-muted">Route Config</h4>
+                <div className="text-sm space-y-1">
+                  <p><span className="text-sidebar-muted">Via:</span> {activeRoute.via || "Direct"}</p>
+                  <p><span className="text-sidebar-muted">Frequency:</span> {activeRoute.frequency}</p>
+                  <p><span className="text-sidebar-muted">Total Stops:</span> {activeRoute.stops?.length || 0}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 rounded-xl bg-white/5 p-4 col-span-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-sidebar-muted">Live Bus Info</h4>
+                {activeTracking ? (
+                  <div className="grid gap-3 sm:grid-cols-2 text-sm">
+                    <div className="space-y-1">
+                      <p className="flex items-center gap-1.5"><Bus className="h-4 w-4 text-primary" /> <span className="text-sidebar-muted">Bus No:</span> <strong className="text-foreground">{activeTracking.bus?.busNumber || "Bus"}</strong></p>
+                      <p className="flex items-center gap-1.5"><User className="h-4 w-4 text-accent" /> <span className="text-sidebar-muted">Driver:</span> {activeTracking.driverName}</p>
+                      <p className="flex items-center gap-1.5"><Gauge className="h-4 w-4 text-info" /> <span className="text-sidebar-muted">Speed:</span> {activeTracking.speed?.toFixed(0) || 0} km/h</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="flex items-center gap-1.5"><Navigation className="h-4 w-4 text-success" /> <span className="text-sidebar-muted">Next Stop:</span> {activeTracking.nextStop || "N/A"}</p>
+                      <p className="flex items-center gap-1.5"><Clock className="h-4 w-4 text-warning" /> <span className="text-sidebar-muted">ETA:</span> {activeTracking.eta || "N/A"}</p>
+                      <p className="flex items-center gap-1.5"><Zap className="h-4 w-4 text-primary" /> <span className="text-sidebar-muted">Status:</span> <span className="text-green-400 font-semibold">{activeTracking.status}</span></p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-sidebar-muted flex items-center gap-2 py-2">
+                    <AlertTriangle className="h-4 w-4" /> No bus is currently running live on this route.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
       {/* Stats Grid */}
       <DashboardCards stats={stats} />
 
-      {/* Middle Row: System Overview + Quick Actions */}
+      {/* Analytics Visualizations */}
+      <AnalyticsCharts stats={stats} />
+
+      {/* Middle Row: System Overview + Quick Actions + Recent Alerts */}
       <div className="grid gap-6 lg:grid-cols-3">
         <SystemHealth metrics={healthMetrics} />
+        
+        {/* Recent System Alerts */}
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-foreground">Recent System Alerts</h2>
+              <Bell className="h-5 w-5 text-muted-foreground/50" />
+            </div>
+            
+            <div className="space-y-3">
+              {notifications.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">No recent alerts or logs.</p>
+              ) : (
+                notifications.slice(0, 4).map((notif) => (
+                  <div key={notif._id} className="flex gap-3 text-sm pb-2 border-b border-border/40 last:border-0">
+                    <div className={`mt-0.5 rounded-lg p-1.5 h-fit ${notif.iconBg || "bg-yellow-500/10"}`}>
+                      <AlertTriangle className={`h-4 w-4 ${notif.iconColor || "text-yellow-600"}`} />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-foreground">{notif.title}</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">{notif.description}</p>
+                      <span className="text-[10px] text-muted-foreground/60 mt-1 block">
+                        {notif.createdAt ? new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          
+          <Link href="/admin/notifications" className="mt-4 text-center text-xs font-semibold text-primary hover:underline block pt-2">
+            View All Notifications
+          </Link>
+        </div>
+
         <QuickActions />
       </div>
 
@@ -293,3 +382,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+

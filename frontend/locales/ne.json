@@ -53,7 +53,9 @@
     "on_time": "समयमै",
     "eta": "पुग्ने समय",
     "speed": "गति",
-    "next_stop": "अर्को स्टप"
+    "next_stop": "अर्को स्टप",
+    "no_routes": "रुट भेटिएन",
+    "view_all_routes": "सबै रुट हेर्नुहोस्"
   },
   "stats": {
     "active_buses": "सक्रिय बसहरू",

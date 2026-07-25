@@ -10,7 +10,7 @@ import { useLanguage } from '@/context/LanguageContext';
 const MapView = dynamic(() => import('./MapView'), {
   ssr: false,
   loading: () => (
-    <div className="h-150 w-full rounded-2xl bg-gray-100 animate-pulse lg:w-2/3" />
+    <div className="h-[600px] w-full rounded-2xl bg-gray-100 animate-pulse lg:w-2/3" />
   ),
 });
 
@@ -41,9 +41,6 @@ const LiveTracking = () => {
   const activeTracking = activeRoute
     ? trackingByRouteId.get(activeRoute._id)
     : undefined;
-        console.log("Selected Route:", activeRoute?._id);
-    console.log("Tracking Found:", activeTracking);
-    console.log("Tracking Map:", trackingByRouteId);
 
   useEffect(() => {
     if (!activeRoute?._id) return;
@@ -60,55 +57,51 @@ const LiveTracking = () => {
     : activeRouteCoords.length > 0
     ? activeRouteCoords[0]
     : undefined;
-    console.log("BUS POSITION PROP:", activeTracking
-  ? [activeTracking.latitude, activeTracking.longitude]
-  : undefined
-);console.log(
-  "LIVE BUS:",
-  activeTracking?.latitude,
-  activeTracking?.longitude
-);
 
   return (
     <section className="bg-surface py-12 transition-colors">
       <div className="mx-auto max-w-7xl px-6">
-        <div className="flex flex-col gap-8 lg:flex-row">
-          {loadingRoutes ? (
-            <div className="flex h-150 w-full items-center justify-center rounded-2xl bg-card shadow-md lg:w-1/3 animate-pulse">
-              <span className="text-gray-500 font-medium">
-                {t('common.loading')}
-              </span>
-            </div>
-          ) : (
-            <RouteSidebar
-              routes={sidebarRoutes}
-              title={t('tracking.title')}
-              description={t('tracking.subtitle')}
-              showSearch={true}
-              onSelect={setSelectedIndex}
-            />
-          )}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+          <div className="lg:col-span-1">
+            {loadingRoutes ? (
+              <div className="flex h-[600px] w-full items-center justify-center rounded-2xl bg-card shadow-md lg:w-1/3 animate-pulse">
+                <span className="text-gray-500 font-medium">
+                  {t('common.loading')}
+                </span>
+              </div>
+            ) : (
+              <RouteSidebar
+                routes={sidebarRoutes}
+                title={t('tracking.title')}
+                description={t('tracking.subtitle')}
+                showSearch={true}
+                onSelect={setSelectedIndex}
+              />
+            )}
+          </div>
 
-          <MapView
-            center={mapCenter}
-            routeCoordinates={activeRouteCoords}
-            namedStops={namedStops}
-            routeLabel={
-              activeRoute
-                ? `${activeRoute.from} → ${activeRoute.to}`
-                : undefined
-            }
-            showBus={!!activeTracking}
-            busPosition={
-              activeTracking
-                ? [activeTracking.latitude, activeTracking.longitude]
-                : undefined
-            }
-            busName={activeTracking?.bus?.busNumber || 'Bus'}
-            speed={activeTracking?.speed}
-            eta={activeTracking?.eta}
-            nextStop={activeTracking?.nextStop}
-          />
+          <div className="lg:col-span-2 min-w-0 h-[600px]">
+            <MapView
+              center={mapCenter}
+              routeCoordinates={activeRouteCoords}
+              namedStops={namedStops}
+              routeLabel={
+                activeRoute
+                  ? `${activeRoute.from} → ${activeRoute.to}`
+                  : undefined
+              }
+              showBus={!!activeTracking}
+              busPosition={
+                activeTracking
+                  ? [activeTracking.latitude, activeTracking.longitude]
+                  : undefined
+              }
+              busName={activeTracking?.bus?.busNumber || 'Bus'}
+              speed={activeTracking?.speed}
+              eta={activeTracking?.eta}
+              nextStop={activeTracking?.nextStop}
+            />
+          </div>
         </div>
       </div>
     </section>
