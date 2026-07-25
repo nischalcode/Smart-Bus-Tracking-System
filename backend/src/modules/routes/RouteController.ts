@@ -153,8 +153,8 @@ export class RouteController {
       route.status = status;
       route.color = color;
       route.active = active;
-      route.stops = stops;
-      route.pathCoordinates = pathCoordinates;
+      if (stops !== undefined) route.stops = stops;
+      if (pathCoordinates !== undefined) route.pathCoordinates = pathCoordinates;
 
       if (assignedBuses !== undefined || assignedBus !== undefined) {
         const newBusIds = Array.isArray(assignedBuses)

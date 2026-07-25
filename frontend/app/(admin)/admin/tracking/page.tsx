@@ -47,10 +47,14 @@ export default function TrackingPage() {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<TrackingFormData>({
     resolver: zodResolver(trackingSchema),
   });
+
+  const watchedBus = watch("bus");
 
   const fetchAll = async () => {
     try {
@@ -82,6 +86,16 @@ export default function TrackingPage() {
     setShowModal(true);
   };
 
+  const handleBusChange = (busId: string) => {
+    setValue("bus", busId);
+    const selectedBus = buses.find((b) => b._id === busId);
+    if (selectedBus?.assignedRoute && typeof selectedBus.assignedRoute === "object") {
+      setValue("route", (selectedBus.assignedRoute as RouteData)._id);
+    } else {
+      setValue("route", "");
+    }
+  };
+
   const onSubmit = async (data: TrackingFormData) => {
     setSubmitting(true);
     try {
@@ -93,8 +107,9 @@ export default function TrackingPage() {
       setShowModal(false);
       reset();
       fetchAll();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert(err.message || "Failed to initialize tracking");
     } finally {
       setSubmitting(false);
     }
@@ -117,22 +132,34 @@ export default function TrackingPage() {
     }
   };
 
-  const summary = useMemo(() => {
-    const avgSpeed =
-      tracking.length > 0
-        ? Math.round(tracking.reduce((sum, t) => sum + (t.speed || 0), 0) / tracking.length)
-        : 0;
-    const delayed = tracking.filter((t) => t.status?.toLowerCase().includes("delay")).length;
-    const onTimePercent =
-      tracking.length > 0 ? Math.round(((tracking.length - delayed) / tracking.length) * 100) : 100;
-    return { avgSpeed, delayed, onTimePercent };
-  }, [tracking]);
-
   const selected = tracking.find((t) => t._id === selectedId) ?? tracking[0];
   const selectedRoute = selected
     ? routes.find((r) => r._id === selected.route?._id)
     : undefined;
+
+  const summary = useMemo(() => {
+    const items = selected ? [selected] : tracking;
+    const avgSpeed =
+      items.length > 0
+        ? Math.round(items.reduce((sum, t) => sum + (t.speed || 0), 0) / items.length)
+        : 0;
+    const delayed = items.filter((t) => t.status?.toLowerCase().includes("delay")).length;
+    const onTimePercent =
+      items.length > 0 ? Math.round(((items.length - delayed) / items.length) * 100) : 100;
+    return { avgSpeed, delayed, onTimePercent, activeCount: items.length };
+  }, [tracking, selected]);
   const routeCoords = selectedRoute?.pathCoordinates ?? [];
+
+  const namedStops = useMemo(() => {
+    if (!selectedRoute?.stops?.length || routeCoords.length < 2) return [];
+    const stops = selectedRoute.stops;
+    return stops.map((stop, i) => {
+      const t = stops.length === 1 ? 0.5 : i / (stops.length - 1);
+      const idx = Math.min(Math.round(t * (routeCoords.length - 1)), routeCoords.length - 1);
+      const [lat, lng] = routeCoords[idx];
+      return { name: stop.name, lat, lng, type: stop.type as "start" | "stop" | "end" };
+    });
+  }, [selectedRoute, routeCoords]);
 
   const columns: Column<TrackingData & Record<string, unknown>>[] = [
     {
@@ -187,7 +214,7 @@ export default function TrackingPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard icon={Radio} label="Active Trackings" value={tracking.length} tone="primary" />
+        <StatsCard icon={Radio} label={selected ? "Selected" : "Active Trackings"} value={summary.activeCount} tone="primary" />
         <StatsCard icon={Gauge} label="Average Speed" value={`${summary.avgSpeed} km/h`} tone="accent" />
         <StatsCard icon={TrendingUp} label="On-Time" value={`${summary.onTimePercent}%`} tone="info" />
         <StatsCard icon={AlertTriangle} label="Delayed" value={summary.delayed} tone="warning" />
@@ -210,6 +237,7 @@ export default function TrackingPage() {
                 selected ? [selected.latitude, selected.longitude] : routeCoords[0]
               }
               routeCoordinates={routeCoords}
+              namedStops={namedStops}
               routeLabel={
                 selectedRoute ? `${selectedRoute.from} → ${selectedRoute.to}` : undefined
               }
@@ -244,6 +272,7 @@ export default function TrackingPage() {
             <label className="block text-sm font-medium text-foreground">Bus</label>
             <select
               {...register("bus")}
+              onChange={(e) => handleBusChange(e.target.value)}
               className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
             >
               <option value="">Select a bus</option>

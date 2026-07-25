@@ -186,12 +186,7 @@ export default function BusesPage() {
     [buses, statusFilter]
   );
   
-  const availableRoutes = routes.filter((r) => {
-    if (!r.assignedBuses?.length) return true;
-    if (!editingBus) return false;
-    const currentRouteId = typeof editingBus.assignedRoute === "string" ? editingBus.assignedRoute : (editingBus.assignedRoute as any)?._id;
-    return r._id === currentRouteId;
-  });
+  const availableRoutes = routes;
 
   const columns: Column<any>[] = [
     {
@@ -299,6 +294,7 @@ export default function BusesPage() {
         isOpen={showModal}
         onClose={() => setShowModal(false)}
         title={editingBus ? "Edit Bus" : "Add Bus"}
+        size="lg"
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
@@ -349,7 +345,7 @@ export default function BusesPage() {
                     <select {...register("assignedRoute")} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none">
                         <option value="">Select an available route...</option>
                         {availableRoutes.map(route => (
-                            <option key={route._id} value={route._id}>{route.from} - {route.to}</option>
+                            <option key={route._id} value={route._id}>{route.routeNo} — {route.from} → {route.to}</option>
                         ))}
                     </select>
                  </div>
@@ -358,17 +354,51 @@ export default function BusesPage() {
 
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">Assigned Drivers</label>
-            <div className="max-h-40 overflow-y-auto rounded-lg border p-2 space-y-1.5 bg-muted/20">
-              {drivers.map((driver) => {
-                const isChecked = selectedDriverIds.includes(driver._id);
-                return (
-                  <label key={driver._id} className="flex items-center gap-2 p-2 cursor-pointer">
-                    <input type="checkbox" checked={isChecked} onChange={() => toggleDriverSelection(driver._id)} />
-                    <span className="text-sm">{driver.name}</span>
-                  </label>
-                );
-              })}
-            </div>
+            {drivers.length === 0 ? (
+              <p className="text-sm text-muted-foreground border rounded-lg p-3 bg-muted/20">
+                No drivers found. Create drivers first in the{" "}
+                <a href="/admin/drivers" className="font-medium text-primary hover:underline">Drivers</a>{" "}
+                section.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <div className="max-h-40 overflow-y-auto rounded-lg border p-2 space-y-1.5 bg-muted/20">
+                  {drivers.map((driver) => {
+                    const isChecked = selectedDriverIds.includes(driver._id);
+                    return (
+                      <label key={driver._id} className="flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-muted/40 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleDriverSelection(driver._id)}
+                          className="h-4 w-4 text-primary rounded"
+                        />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">{driver.name}</span>
+                          <span className="text-xs text-muted-foreground">{driver.driverId} • {driver.phoneNumber}</span>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+                {selectedDriverIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedDriverIds.map((id) => {
+                      const d = drivers.find((dr) => dr._id === id);
+                      if (!d) return null;
+                      return (
+                        <span key={id} className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                          {d.name}
+                          <button type="button" onClick={() => toggleDriverSelection(id)} className="hover:text-primary/70">
+                            ×
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-2">

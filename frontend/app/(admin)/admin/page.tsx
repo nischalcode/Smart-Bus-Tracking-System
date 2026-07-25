@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   MapPin,
@@ -15,11 +15,13 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { fetchApi, StatsData } from "@/utils/api";
+import { fetchApi, StatsData, BusData } from "@/utils/api";
 import LoadingSpinner from "@/component/ui/LoadingSpinner";
-import MapView from "@/component/LiveTracking/MapView";
+import MapView, { type BusMarker } from "@/component/LiveTracking/MapView";
 import { useLiveTracking } from "@/hooks/useLiveTracking";
 import DashboardCards from "@/component/admin/DashboardCards";
+
+const fallbackBusPosition: [number, number] = [27.7172, 85.324];
 import QuickActions from "@/component/admin/QuickActions";
 import SystemHealth from "@/component/admin/SystemHealth";
 import RealtimeLogs from "@/component/admin/RealtimeLogs";
@@ -27,16 +29,96 @@ import RealtimeLogs from "@/component/admin/RealtimeLogs";
 export default function AdminDashboard() {
   const { token, user } = useAuth();
   const [stats, setStats] = useState<StatsData["stats"] | null>(null);
+  const [buses, setBuses] = useState<BusData[]>([]);
   const [loading, setLoading] = useState(true);
-  const { routes, trackingByRouteId, tracking } = useLiveTracking();
+  const { routes, trackingByRouteId, tracking, trackingByBusId } = useLiveTracking();
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
   useEffect(() => {
-    fetchApi<StatsData>("/dashboard/stats", {}, token ?? undefined)
-      .then((res) => setStats(res.stats))
+    Promise.all([
+      fetchApi<StatsData>("/dashboard/stats", {}, token ?? undefined),
+      fetchApi<{ success: boolean; buses: BusData[] }>("/buses", {}, token ?? undefined),
+    ])
+      .then(([statsRes, busesRes]) => {
+        setStats(statsRes.stats);
+        setBuses(busesRes.buses || []);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [token]);
+
+  const activeRoute = routes[selectedIndex];
+  const activeRouteCoords = activeRoute?.pathCoordinates || [];
+  const activeTracking = activeRoute
+    ? trackingByRouteId.get(activeRoute._id)
+    : undefined;
+
+  const busMarkers = useMemo<BusMarker[]>(() => {
+    const markers: BusMarker[] = [];
+
+    buses.forEach((bus, index) => {
+      const route = typeof bus.assignedRoute === "object" && bus.assignedRoute ? bus.assignedRoute : undefined;
+      const routeCoords = route?.pathCoordinates ?? [];
+      const rawLat = bus.location?.lat;
+      const rawLng = bus.location?.lng;
+      const baseOffset = 0.01;
+      const offsetRow = Math.floor(index / 2);
+      const offsetCol = index % 2;
+      const fallbackPosition: [number, number] = [
+        fallbackBusPosition[0] + (offsetCol === 0 ? -baseOffset : baseOffset),
+        fallbackBusPosition[1] + (offsetRow * baseOffset),
+      ];
+      const position =
+        rawLat != null && rawLng != null && Number.isFinite(Number(rawLat)) && Number.isFinite(Number(rawLng))
+          ? [Number(rawLat), Number(rawLng)] as [number, number]
+          : routeCoords[0]
+            ? [routeCoords[0][0], routeCoords[0][1]] as [number, number]
+            : fallbackPosition;
+
+      const liveTracking = trackingByBusId.get(bus._id);
+
+      let driverName = "Unassigned";
+      if (bus.activeDriver && typeof bus.activeDriver === "object" && "name" in bus.activeDriver) {
+        driverName = (bus.activeDriver as any).name;
+      } else if (bus.assignedDrivers?.length) {
+        const first = bus.assignedDrivers[0];
+        driverName = typeof first === "object" && "name" in first ? (first as any).name : "Assigned";
+      }
+
+      // Get destination from route's "to" field
+      const destination = route?.to || "No destination";
+
+      // Get next stop from route stops
+      let nextStop = "N/A";
+      if (route?.stops && route.stops.length > 0) {
+        const firstStop = route.stops[0];
+        nextStop = typeof firstStop === "object" && "name" in firstStop ? (firstStop as any).name : String(firstStop);
+      }
+
+      markers.push({
+        id: bus._id,
+        position,
+        name: bus.busNumber,
+        routeLabel: destination,
+        eta: liveTracking?.eta,
+        speed: liveTracking?.speed,
+        nextStop,
+        colorIndex: index % 6,
+        driverName,
+        status: bus.status,
+      });
+    });
+
+    return markers;
+  }, [buses, trackingByBusId]);
+
+  const mapCenter: [number, number] | undefined = activeTracking
+    ? [activeTracking.latitude, activeTracking.longitude]
+    : busMarkers[0]?.position
+      ? busMarkers[0].position
+      : activeRouteCoords.length > 0
+        ? activeRouteCoords[0]
+        : undefined;
 
   if (loading) {
     return <LoadingSpinner size="lg" />;
@@ -107,18 +189,6 @@ export default function AdminDashboard() {
     day: "numeric",
   });
 
-  const activeRoute = routes[selectedIndex];
-  const activeRouteCoords = activeRoute?.pathCoordinates || [];
-  const activeTracking = activeRoute
-    ? trackingByRouteId.get(activeRoute._id)
-    : undefined;
-
-  const mapCenter: [number, number] | undefined = activeTracking
-    ? [activeTracking.latitude, activeTracking.longitude]
-    : activeRouteCoords.length > 0
-    ? activeRouteCoords[0]
-    : undefined;
-
   return (
     <div className="space-y-6">
       {/* Welcome Banner */}
@@ -160,16 +230,9 @@ export default function AdminDashboard() {
             routeLabel={
               activeRoute ? `${activeRoute.from} → ${activeRoute.to}` : undefined
             }
-            showBus={!!activeTracking}
-            busPosition={
-              activeTracking
-                ? [activeTracking.latitude, activeTracking.longitude]
-                : undefined
-            }
-            busName={activeTracking?.bus?.busNumber || "Bus"}
-            speed={activeTracking?.speed}
-            eta={activeTracking?.eta}
-            nextStop={activeTracking?.nextStop}
+            showAllBuses={busMarkers.length > 0}
+            buses={busMarkers}
+            showBus={false}
           />
         </div>
 
@@ -177,11 +240,11 @@ export default function AdminDashboard() {
           <div>
             <p className="text-sm text-sidebar-muted">Current Focus</p>
             <h2 className="text-2xl font-bold">
-              {activeRoute ? `${activeRoute.from} → ${activeRoute.to}` : "Kathmandu Valley Routes"}
+              {activeRoute ? `${activeRoute.from} → ${activeRoute.to}` : "Fleet overview"}
             </h2>
             <p className="mt-1 flex items-center gap-1.5 text-accent">
               <span className="live-dot h-2 w-2 rounded-full bg-accent" />
-              {tracking.length} vehicle{tracking.length === 1 ? "" : "s"} active • On-time
+              {buses.length} bus{buses.length === 1 ? "" : "es"} on map • Live fleet view
             </p>
           </div>
 

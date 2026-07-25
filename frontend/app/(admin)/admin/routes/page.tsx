@@ -40,6 +40,9 @@ export default function RoutesPage() {
   const [viewingRoute, setViewingRoute] = useState<RouteData | null>(null);
   const [deletingRoute, setDeletingRoute] = useState<RouteData | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [stopEntries, setStopEntries] = useState<Array<{ name: string; lat: string; lng: string }>>([
+    { name: "", lat: "", lng: "" },
+  ]);
 
   const { register, handleSubmit, reset, watch, control } = useForm<RouteFormData>({
     resolver: zodResolver(routeSchema),
@@ -47,6 +50,59 @@ export default function RoutesPage() {
   });
 
   const assignedBuses = watch("assignedBuses");
+
+  const updateStopEntry = (index: number, field: "name" | "lat" | "lng", value: string) => {
+    const updated = [...stopEntries];
+    updated[index][field] = value;
+    setStopEntries(updated);
+  };
+
+  const addEmptyStopEntry = () => {
+    setStopEntries([...stopEntries, { name: "", lat: "", lng: "" }]);
+  };
+
+  const removeStopEntry = (index: number) => {
+    setStopEntries(stopEntries.filter((_, i) => i !== index));
+  };
+
+  const addStopsManually = () => {
+    const validStops: NamedStop[] = [];
+
+    for (let i = 0; i < stopEntries.length; i++) {
+      const entry = stopEntries[i];
+      
+      if (!entry.name.trim() && !entry.lat && !entry.lng) {
+        continue; // Skip empty entries
+      }
+
+      if (!entry.name.trim()) {
+        alert(`Stop ${i + 1}: Please enter a stop name`);
+        return;
+      }
+
+      const lat = parseFloat(entry.lat);
+      const lng = parseFloat(entry.lng);
+
+      if (isNaN(lat) || isNaN(lng)) {
+        alert(`Stop ${i + 1}: Please enter valid latitude and longitude`);
+        return;
+      }
+
+      validStops.push({ name: entry.name, lat, lng });
+    }
+
+    if (validStops.length === 0) {
+      alert("Please enter at least one stop");
+      return;
+    }
+
+    setNamedStops([...namedStops, ...validStops]);
+    setStopEntries([{ name: "", lat: "", lng: "" }]);
+  };
+
+  const removeStop = (index: number) => {
+    setNamedStops(namedStops.filter((_, i) => i !== index));
+  };
 
   const fetchData = async () => {
     try {
@@ -74,7 +130,11 @@ export default function RoutesPage() {
 
   const openEdit = (route: RouteData) => {
     setEditingRoute(route);
-    setNamedStops([]); // Wait for map interaction
+    setNamedStops(
+      (route.stops || [])
+        .filter((s): s is RouteStop & NamedStop => typeof s.lat === "number" && typeof s.lng === "number")
+        .map((s) => ({ name: s.name, lat: s.lat, lng: s.lng }))
+    );
     reset({
       routeNo: route.routeNo,
       from: route.from,
@@ -195,22 +255,139 @@ const deleteRoute = async () => {
           
           <div className="p-3 border rounded-lg bg-muted/10 space-y-3">
             <label className="block text-sm font-semibold">Assign buses</label>
-            <select
-              {...register("assignedBuses")}
-              multiple
-              className="h-32 w-full rounded-lg border p-2 text-sm"
-            >
-              {availableBuses.map((bus) => (
-                <option key={bus._id} value={bus._id}>
-                  {bus.busNumber} ({bus.capacity ?? "—"} seats)
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-muted-foreground">Select one or more buses that will operate on this route.</p>
+            <Controller
+              name="assignedBuses"
+              control={control}
+              render={({ field }) => (
+                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                  {availableBuses.map((bus) => (
+                    <label key={bus._id} className="flex items-center gap-2 cursor-pointer rounded-lg p-2 hover:bg-background/50">
+                      <input
+                        type="checkbox"
+                        checked={(field.value || []).includes(bus._id)}
+                        onChange={(e) => {
+                          const currentValue = field.value || [];
+                          if (e.target.checked) {
+                            field.onChange([...currentValue, bus._id]);
+                          } else {
+                            field.onChange(currentValue.filter((id) => id !== bus._id));
+                          }
+                        }}
+                        className="rounded border p-1"
+                      />
+                      <span className="text-sm">
+                        {bus.busNumber} ({bus.capacity ?? "—"} seats)
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            />
+            {availableBuses.length === 0 && (
+              <p className="text-xs text-muted-foreground">No buses available to assign.</p>
+            )}
+            <p className="text-xs text-muted-foreground">Click to select buses that will operate on this route.</p>
           </div>
 
           <div>
              <RouteMapPicker value={namedStops} onChange={setNamedStops} />
+          </div>
+
+          <div className="p-3 border rounded-lg bg-muted/10 space-y-3">
+            <label className="block text-sm font-semibold">Add Multiple Stops Manually</label>
+            
+            <div className="space-y-3 max-h-80 overflow-y-auto">
+              {stopEntries.map((entry, index) => (
+                <div key={index} className="grid gap-3 sm:grid-cols-4 p-2 border rounded-lg bg-background/50">
+                  <div>
+                    <label className="block text-xs text-muted-foreground">Stop {index + 1} Name</label>
+                    <input
+                      type="text"
+                      value={entry.name}
+                      onChange={(e) => updateStopEntry(index, "name", e.target.value)}
+                      placeholder="e.g., Main Station"
+                      className="mt-1 w-full rounded-lg border p-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-muted-foreground">Latitude</label>
+                    <input
+                      type="number"
+                      step="0.00001"
+                      value={entry.lat}
+                      onChange={(e) => updateStopEntry(index, "lat", e.target.value)}
+                      placeholder="e.g., 27.7172"
+                      className="mt-1 w-full rounded-lg border p-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-muted-foreground">Longitude</label>
+                    <input
+                      type="number"
+                      step="0.00001"
+                      value={entry.lng}
+                      onChange={(e) => updateStopEntry(index, "lng", e.target.value)}
+                      placeholder="e.g., 85.324"
+                      className="mt-1 w-full rounded-lg border p-2 text-sm"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    {stopEntries.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeStopEntry(index)}
+                        className="w-full rounded-lg bg-red-100 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-200"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={addEmptyStopEntry}
+                className="flex-1 rounded-lg border border-accent px-3 py-2 text-sm font-semibold text-accent hover:bg-accent/10"
+              >
+                + Add Another Stop
+              </button>
+              <button
+                type="button"
+                onClick={addStopsManually}
+                className="flex-1 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent/90"
+              >
+                Add All Stops
+              </button>
+            </div>
+
+            {namedStops.length > 0 && (
+              <div className="mt-4 space-y-2 pt-3 border-t">
+                <label className="block text-xs font-semibold text-muted-foreground">Added Stops ({namedStops.length})</label>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {namedStops.map((stop, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between rounded-lg bg-background/50 p-2 text-xs"
+                    >
+                      <div>
+                        <span className="font-semibold">{stop.name}</span>
+                        <span className="ml-2 text-muted-foreground">({stop.lat.toFixed(5)}, {stop.lng.toFixed(5)})</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeStop(index)}
+                        className="ml-2 rounded px-2 py-1 text-xs text-red-600 hover:bg-red-100"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-2">

@@ -148,7 +148,7 @@ export class BusController {
   async updateBus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
-      const { busNumber, modelName, capacity, status, assignedDrivers, assignedRoute } = req.body;
+      const { busNumber, modelName, capacity, status, assignedDrivers, assignedRoute, routeAssigned } = req.body;
 
       const bus = await BusModel.findById(id);
       if (!bus) {
@@ -169,7 +169,48 @@ export class BusController {
       if (capacity !== undefined) bus.capacity = capacity;
       if (status !== undefined) bus.status = status;
 
-      if (assignedRoute !== undefined) {
+      // Handle route assignment
+      if (routeAssigned !== undefined) {
+        if (routeAssigned && assignedRoute) {
+          // Assigning a route
+          const oldRouteId = bus.assignedRoute?.toString();
+
+          if (oldRouteId && oldRouteId !== assignedRoute) {
+            // Remove from old route
+            await RouteModel.findByIdAndUpdate(oldRouteId, {
+              $pull: { assignedBuses: bus._id },
+            });
+          }
+
+          const routeDoc = await RouteModel.findById(assignedRoute);
+          if (routeDoc) {
+            bus.assignedRoute = routeDoc._id as any;
+            bus.routeAssigned = true;
+            bus.routeId = routeDoc._id.toString();
+            bus.routeName = `${routeDoc.from} - ${routeDoc.to}`;
+
+            await RouteModel.findByIdAndUpdate(assignedRoute, {
+              $addToSet: { assignedBuses: bus._id },
+              assignedBus: bus._id,
+              busAssigned: true,
+            });
+          }
+        } else if (!routeAssigned) {
+          // Unassigning route
+          const oldRouteId = bus.assignedRoute?.toString();
+          bus.assignedRoute = null;
+          bus.routeAssigned = false;
+          bus.routeId = "";
+          bus.routeName = "";
+
+          if (oldRouteId) {
+            await RouteModel.findByIdAndUpdate(oldRouteId, {
+              $pull: { assignedBuses: bus._id },
+            });
+          }
+        }
+      } else if (assignedRoute !== undefined) {
+        // Direct route assignment without routeAssigned flag (backward compatibility)
         const oldRouteId = bus.assignedRoute?.toString();
 
         if (assignedRoute) {
@@ -181,11 +222,6 @@ export class BusController {
 
           const routeDoc = await RouteModel.findById(assignedRoute);
           if (routeDoc) {
-            if (bus.assignedRoute && bus.assignedRoute.toString() !== routeDoc._id.toString()) {
-               res.status(400).json({ success: false, message: "Bus is already assigned to a different route. Please unassign first." });
-               return;
-            }
-
             bus.assignedRoute = routeDoc._id as any;
             bus.routeAssigned = true;
             bus.routeId = routeDoc._id.toString();

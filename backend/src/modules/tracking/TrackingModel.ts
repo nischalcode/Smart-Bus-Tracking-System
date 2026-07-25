@@ -8,7 +8,7 @@ const trackingSchema = new Schema(
     busNo: { type: String, required: true },
     routeId: { type: Schema.Types.ObjectId, ref: "Route", required: true },
     routeName: { type: String, required: true },
-    direction: { type: String, enum: ["Going", "Coming"], default: "Going" },
+    direction: { type: String, enum: ["Going", "Coming", "Outbound", "Inbound"], default: "Going" },
     latitude: { type: Number, required: true },
     longitude: { type: Number, required: true },
     accuracy: { type: Number, default: 0 },
@@ -18,6 +18,9 @@ const trackingSchema = new Schema(
     bus: { type: Schema.Types.ObjectId, ref: "Bus" },
     route: { type: Schema.Types.ObjectId, ref: "Route" },
     status: { type: String, default: "Live" },
+    currentIndex: { type: Number, default: 0 },
+    eta: { type: String },
+    nextStop: { type: String },
   },
   { timestamps: true }
 );

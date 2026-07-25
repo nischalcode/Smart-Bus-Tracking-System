@@ -32,8 +32,6 @@ export function useLiveTracking() {
     const fetchTracking = () => {
       fetchApi<TrackingResponse>("/tracking")
         .then((data) => {
-          console.log("Tracking api",data);
-          
           if (!mounted) return;
           if (data.success && data.tracking) setTracking(data.tracking);
         })
@@ -52,48 +50,54 @@ export function useLiveTracking() {
     };
   }, []);
 
-  // const trackingByRouteId = useMemo(() => {
-  //   const map = new Map<string, TrackingData>();
-  //   for (const t of tracking) {
-  //     if (t.route?._id) map.set(t.route._id, t);
-  //   }
-  //   return map;
-  // }, [tracking]);
-const trackingByRouteId = useMemo(() => {
-  const map = new Map<string, TrackingData>();
+  const trackingByRouteId = useMemo(() => {
+    const map = new Map<string, TrackingData>();
 
+    for (const t of tracking) {
+      const routeId = typeof t.route === "string" ? t.route : t.route?._id;
+      if (!routeId) continue;
 
-  for (const t of tracking) {
-  const routeId =
-    typeof t.route === "string"
-      ? t.route
-      : t.route?._id;
+      const existing = map.get(routeId);
+      const currentTime = t.timestamp ? new Date(t.timestamp).getTime() : 0;
+      const existingTime = existing?.timestamp
+        ? new Date(existing.timestamp).getTime()
+        : 0;
 
-  if (!routeId) continue;
+      if (!existing || currentTime > existingTime) {
+        map.set(routeId, t);
+      }
+    }
 
-  const existing = map.get(routeId);
+    return map;
+  }, [tracking]);
 
-  const currentTime = t.timestamp
-    ? new Date(t.timestamp).getTime()
-    : 0;
+  const trackingByBusId = useMemo(() => {
+    const map = new Map<string, TrackingData>();
 
-  const existingTime = existing?.timestamp
-    ? new Date(existing.timestamp).getTime()
-    : 0;
+    for (const t of tracking) {
+      const busId = t.busId || (typeof t.bus === "string" ? t.bus : t.bus?._id);
+      if (!busId) continue;
 
-  if (!existing || currentTime > existingTime) {
-    map.set(routeId, t);
-  }
-}
+      const existing = map.get(busId);
+      const currentTime = t.timestamp ? new Date(t.timestamp).getTime() : 0;
+      const existingTime = existing?.timestamp
+        ? new Date(existing.timestamp).getTime()
+        : 0;
 
+      if (!existing || currentTime > existingTime) {
+        map.set(busId, t);
+      }
+    }
 
-  return map;
-}, [tracking]);
+    return map;
+  }, [tracking]);
+
   return {
     routes,
     tracking,
     loadingRoutes,
     loadingTracking,
     trackingByRouteId,
+    trackingByBusId,
   };
 }

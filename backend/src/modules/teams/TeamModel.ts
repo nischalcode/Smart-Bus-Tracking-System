@@ -7,6 +7,9 @@ const teamSchema = new Schema(
     description: { type: String, default: "" },
     image: { type: String, default: "" },
     linkedin: { type: String, default: "" },
+    facebook: { type: String, default: "" },
+    instagram: { type: String, default: "" },
+    email: { type: String, default: "" },
     order: { type: Number, default: 0 },
   },
   { timestamps: true }

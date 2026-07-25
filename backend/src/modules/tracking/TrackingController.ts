@@ -239,19 +239,35 @@ export class TrackingController {
     }
   }
 
+  async deleteTracking(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const tracking = await TrackingModel.findByIdAndDelete(id);
+      if (!tracking) {
+        res.status(404).json({ success: false, message: "Tracking record not found." });
+        return;
+      }
+      res.status(200).json({ success: true, message: "Tracking deleted successfully." });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // ── GET /api/tracking ─────────────────────────────────────────────────────
   async getAllLiveTrackings(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const trackings = await TrackingModel.aggregate([
-        { $sort: { createdAt: -1 } },
-        {
-          $group: {
-            _id: "$busId",
-            doc: { $first: "$$ROOT" },
-          },
-        },
-        { $replaceRoot: { newRoot: "$doc" } },
-      ]);
+      const allTrackings = await TrackingModel.find()
+        .sort({ createdAt: -1 })
+        .populate("bus")
+        .populate("route");
+
+      const seen = new Set<string>();
+      const trackings = allTrackings.filter((t) => {
+        const key = (t.busId?.toString() || t.bus?.toString() || t._id.toString());
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
 
       res.status(200).json({ success: true, count: trackings.length, tracking: trackings });
     } catch (error) {

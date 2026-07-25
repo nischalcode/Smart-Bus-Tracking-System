@@ -153,6 +153,11 @@ export interface BusData {
   modelName?: string;
   capacity?: number;
   status: string;
+  location?: {
+    lat?: number;
+    lng?: number;
+    updatedAt?: string;
+  };
 
   activeDriver?: DriverData | string;
   assignedDrivers?: DriverData[];
@@ -300,6 +305,9 @@ export interface TeamData {
   description: string;
   image: string;
   linkedin: string;
+  facebook: string;
+  instagram: string;
+  email: string;
   order: number;
   createdAt: string;
 }

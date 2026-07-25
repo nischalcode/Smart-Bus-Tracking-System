@@ -1,7 +1,7 @@
 import { Router } from "express";
 import authRouter from "../modules/auth/AuthRouter.js";
 import busesRouter from "../modules/buses/BusRouter.js";
-// import companyRouter from "../modules/company/CompanyRouter.js";
+import companyRouter from "../modules/company/CompanyRouter.js";
 import routesRouter from "../modules/routes/RouteRouter.js";
 import driverRouter from "../modules/drivers/DriverRouter.js";
 import schedulesRouter from "../modules/schedules/ScheduleRouter.js";
@@ -12,6 +12,7 @@ import usersRouter from "../modules/users/UserRouter.js";
 import teamsRouter from "../modules/teams/TeamRouter.js";
 import tripRouter from "../modules/trips/TripRouter.js";
 import stopsRouter from "../modules/stops/StopRouter.js";
+import bannersRouter from "../modules/banners/BannerRouter.js";
 
 const router = Router();
 
@@ -27,8 +28,7 @@ router.use("/dashboard", dashboardRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/teams", teamsRouter);
 router.use("/stops", stopsRouter);
-
-// Future
-// router.use("/api/companies", companyRouter);
+router.use("/banners", bannersRouter);
+router.use("/companies", companyRouter);
 
 export default router;

@@ -19,6 +19,9 @@ const teamSchema = z.object({
   description: z.string().optional(),
   image: z.string().optional(),
   linkedin: z.string().optional(),
+  facebook: z.string().optional(),
+  instagram: z.string().optional(),
+  email: z.string().optional(),
   order: z.number().int().min(0),
 });
 
@@ -45,7 +48,7 @@ export default function TeamPage() {
   });
 
   const fetchMembers = () => {
-    fetchApi<TeamResponse>("/teams", {}, token ?? undefined)
+    fetchApi<TeamResponse>("/teams?limit=100", {}, token ?? undefined)
       .then((res) => setMembers(res.members))
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -57,7 +60,7 @@ export default function TeamPage() {
 
   const openCreate = () => {
     setEditingMember(null);
-    reset({ name: "", role: "", description: "", image: "", linkedin: "", order: 0 });
+    reset({ name: "", role: "", description: "", image: "", linkedin: "", facebook: "", instagram: "", email: "", order: 0 });
     setShowModal(true);
   };
 
@@ -69,6 +72,9 @@ export default function TeamPage() {
       description: member.description ?? "",
       image: member.image ?? "",
       linkedin: member.linkedin ?? "",
+      facebook: member.facebook ?? "",
+      instagram: member.instagram ?? "",
+      email: member.email ?? "",
       order: member.order,
     });
     setShowModal(true);
@@ -181,6 +187,7 @@ export default function TeamPage() {
       <DataTable
         data={members as unknown as (TeamData & Record<string, unknown>)[]}
         columns={columns}
+        pageSize={5}
         onEdit={(item) => openEdit(item as unknown as TeamData)}
         onDelete={(item) => confirmDelete(item as unknown as TeamData)}
       />
@@ -192,12 +199,12 @@ export default function TeamPage() {
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="block text-sm font-medium text-gray-900">
               Name
             </label>
             <input
               {...register("name")}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 bg-white"
             />
             {errors.name && (
               <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>
@@ -205,12 +212,12 @@ export default function TeamPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="block text-sm font-medium text-gray-700">
               Role
             </label>
             <input
               {...register("role")}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 bg-white"
             />
             {errors.role && (
               <p className="mt-1 text-xs text-red-500">{errors.role.message}</p>
@@ -218,46 +225,80 @@ export default function TeamPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="block text-sm font-medium text-gray-900">
               Description
             </label>
             <textarea
               {...register("description")}
               rows={3}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 bg-white"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="block text-sm font-medium text-gray-900">
               Image URL
             </label>
             <input
               {...register("image")}
               placeholder="https://example.com/photo.jpg"
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 bg-white"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="block text-sm font-medium text-gray-900">
               LinkedIn URL
             </label>
             <input
               {...register("linkedin")}
               placeholder="https://linkedin.com/in/username"
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 bg-white"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="block text-sm font-medium text-gray-900">
+              Facebook URL
+            </label>
+            <input
+              {...register("facebook")}
+              placeholder="https://facebook.com/username"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 bg-white"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-900">
+              Instagram URL
+            </label>
+            <input
+              {...register("instagram")}
+              placeholder="https://instagram.com/username"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 bg-white"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-900">
+              Email
+            </label>
+            <input
+              {...register("email")}
+              type="email"
+              placeholder="name@example.com"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 bg-white"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-900">
               Order
             </label>
             <input
               type="number"
               {...register("order", { valueAsNumber: true })}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#22a34a] focus:outline-none focus:ring-1 focus:ring-[#22a34a] dark:border-gray-600 bg-white"
             />
           </div>
 

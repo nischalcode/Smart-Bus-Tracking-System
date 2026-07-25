@@ -5,7 +5,7 @@ import { authenticate, authorize } from "../../middleware/AuthMiddleware.js";
 const usersRouter = Router();
 const userCtrl = new UserController();
 
-usersRouter.get("/", userCtrl.getAllUsers.bind(userCtrl));
+usersRouter.get("/", authenticate, authorize(["admin"]), userCtrl.getAllUsers.bind(userCtrl));
 usersRouter.delete("/:id", authenticate, authorize(["admin"]), userCtrl.deleteUser.bind(userCtrl));
 
 export default usersRouter;

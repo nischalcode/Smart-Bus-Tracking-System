@@ -5,7 +5,7 @@ export class TeamController {
   async getAllMembers(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
-      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 5));
       const skip = (page - 1) * limit;
       const [members, total] = await Promise.all([
         TeamModel.find({}).sort({ order: 1 }).skip(skip).limit(limit),
@@ -19,8 +19,8 @@ export class TeamController {
 
   async createMember(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { name, role, description, image, linkedin, order } = req.body;
-      const newMember = await TeamModel.create({ name, role, description, image, linkedin, order });
+      const { name, role, description, image, linkedin, facebook, instagram, email, order } = req.body;
+      const newMember = await TeamModel.create({ name, role, description, image, linkedin, facebook, instagram, email, order });
       res.status(201).json({ success: true, member: newMember });
     } catch (error) {
       next(error);
@@ -30,8 +30,8 @@ export class TeamController {
   async updateMember(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
-      const { name, role, description, image, linkedin, order } = req.body;
-      const member = await TeamModel.findByIdAndUpdate(id, { name, role, description, image, linkedin, order }, { new: true, runValidators: true });
+      const { name, role, description, image, linkedin, facebook, instagram, email, order } = req.body;
+      const member = await TeamModel.findByIdAndUpdate(id, { name, role, description, image, linkedin, facebook, instagram, email, order }, { new: true, runValidators: true });
       if (!member) {
         res.status(404).json({ success: false, message: "Team member not found." });
         return;

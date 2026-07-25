@@ -11,7 +11,7 @@ import TrackLayout from "@/component/track-layout/TrackLayout";
 import { useLiveTracking } from "@/hooks/useLiveTracking";
 
 export default function Page() {
-  const { routes, loadingRoutes, trackingByRouteId } = useLiveTracking();
+  const { routes, loadingRoutes, trackingByRouteId, trackingByBusId } = useLiveTracking();
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRouteFilter, setSelectedRouteFilter] = useState("All Routes");
@@ -28,6 +28,36 @@ export default function Page() {
     : activeRouteCoords.length > 0
     ? activeRouteCoords[0]
     : undefined;
+
+  const allBusMarkers = useMemo(() => {
+    const markers: {
+      id: string;
+      position: [number, number];
+      name: string;
+      routeLabel?: string;
+      eta?: string;
+      speed?: number;
+      nextStop?: string;
+      colorIndex?: number;
+    }[] = [];
+
+    trackingByBusId.forEach((t, busId) => {
+      const routeId = typeof t.route === "string" ? t.route : t.route?._id;
+      const routeIndex = routes.findIndex((r) => r._id === routeId);
+      markers.push({
+        id: busId,
+        position: [t.latitude, t.longitude],
+        name: t.busNo || t.bus?.busNumber || "Bus",
+        routeLabel: t.routeName || (routeIndex >= 0 ? `${routes[routeIndex].from} → ${routes[routeIndex].to}` : undefined),
+        eta: t.eta,
+        speed: t.speed,
+        nextStop: t.nextStop,
+        colorIndex: routeIndex >= 0 ? routeIndex % 6 : 0,
+      });
+    });
+
+    return markers;
+  }, [trackingByBusId, routes]);
 
   const sidebarRoutes = useMemo(() => {
     return routes.map((r, idx) => {
@@ -102,6 +132,8 @@ export default function Page() {
           speed={activeTracking?.speed}
           eta={activeTracking?.eta}
           nextStop={activeTracking?.nextStop}
+          buses={allBusMarkers}
+          showAllBuses={true}
         />
       </div>
 

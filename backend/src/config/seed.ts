@@ -4,10 +4,24 @@ import ScheduleModel from "../modules/schedules/ScheduleModel.js";
 import TrackingModel from "../modules/tracking/TrackingModel.js";
 import NotificationModel from "../modules/notifications/NotificationModel.js";
 import UserModel from "../modules/users/UserModel.js";
+import TeamModel from "../modules/teams/TeamModel.js";
 import bcrypt from "bcryptjs";
 
 export const seedDatabase = async (): Promise<void> => {
   try {
+    // Always ensure admin user exists
+    const adminExists = await UserModel.findOne({ email: "admin@smartbus.com" });
+    if (!adminExists) {
+      const hashedAdminPassword = await bcrypt.hash("admin123", 10);
+      await UserModel.create({
+        name: "Admin",
+        email: "admin@smartbus.com",
+        password: hashedAdminPassword,
+        role: "admin" as any,
+      });
+      console.log("Admin user created.");
+    }
+
     const routeCount = await RouteModel.countDocuments({});
     if (routeCount > 0) {
       console.log("Database already seeded. Skipping seeder.");
@@ -15,15 +29,6 @@ export const seedDatabase = async (): Promise<void> => {
     }
 
     console.log("Seeding database with default routes, buses, and settings...");
-
-    // 1. Seed Admin User
-    const hashedAdminPassword = await bcrypt.hash("admin123", 10);
-    await UserModel.create({
-      name: "Admin",
-      email: "admin@smartbus.com",
-      password: hashedAdminPassword,
-      role: "super_admin" as any,
-    });
 
     // 1b. Seed Driver User
     const hashedDriverPassword = await bcrypt.hash("driver123", 10);
@@ -315,6 +320,18 @@ export const seedDatabase = async (): Promise<void> => {
         badgeColor: "text-gray-500",
       },
     ]);
+
+    // ── Team Members ────────────────────────────────────────────────────────
+    const teamCount = await TeamModel.countDocuments();
+    if (teamCount === 0) {
+      await TeamModel.insertMany([
+        { name: "Manish Khadka", role: "CEO & Founder", description: "Passionate about smart mobility and building technology that makes a difference.", image: "", linkedin: "#", order: 1 },
+        { name: "Pratik Adhikari", role: "CTO & FullStack Developer", description: "Leads technology and product development with a focus on innovation and scalability.", image: "", linkedin: "#", order: 2 },
+        { name: "Nischal Joshi", role: "Head of Operations", description: "Ensures smooth operations and strong partnerships across the transportation network.", image: "", linkedin: "#", order: 3 },
+        { name: "Priya Gurung", role: "UX/UI Designer", description: "Designs user-friendly experiences that make commuting simple and enjoyable.", image: "", linkedin: "#", order: 4 },
+      ]);
+      console.log("Team members seeded.");
+    }
 
     console.log("Database seeded successfully!");
   } catch (error: any) {
