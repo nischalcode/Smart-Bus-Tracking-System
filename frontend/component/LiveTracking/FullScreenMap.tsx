@@ -4,7 +4,8 @@ import { useEffect, useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { X, Search } from "lucide-react";
 import { useLiveTracking } from "@/hooks/useLiveTracking";
-import { RouteData } from "@/utils/api";
+import { NamedStop, fetchStopsByRoute } from "@/utils/api";
+import { formatDistance, formatETA } from "@/utils/geo";
 
 const MapView = dynamic(() => import("./MapView"), {
   ssr: false,
@@ -20,6 +21,7 @@ const FullScreenMap = ({ onClose, initialRouteIndex = 0 }: FullScreenMapProps) =
   const { routes, trackingByRouteId } = useLiveTracking();
   const [selectedIndex, setSelectedIndex] = useState(initialRouteIndex);
   const [search, setSearch] = useState("");
+  const [namedStops, setNamedStops] = useState<NamedStop[]>([]);
 
   useEffect(() => {
     setSelectedIndex(initialRouteIndex);
@@ -46,11 +48,23 @@ const FullScreenMap = ({ onClose, initialRouteIndex = 0 }: FullScreenMapProps) =
     ? trackingByRouteId.get(activeRoute._id)
     : undefined;
 
+  const showBus = !!activeTracking && activeTracking.status === "Live";
+
   const mapCenter: [number, number] | undefined = activeTracking
     ? [activeTracking.latitude, activeTracking.longitude]
     : activeRouteCoords.length > 0
     ? activeRouteCoords[0]
     : undefined;
+
+  // Fetch stops for the active route
+  useEffect(() => {
+    if (!activeRoute?._id) return;
+    fetchStopsByRoute(activeRoute._id)
+      .then((data) => {
+        setNamedStops(data?.stops || []);
+      })
+      .catch(console.error);
+  }, [activeRoute?._id]);
 
   const filteredRoutes = routes.filter((r) => {
     if (!search) return true;
@@ -146,7 +160,7 @@ const FullScreenMap = ({ onClose, initialRouteIndex = 0 }: FullScreenMapProps) =
           </div>
         </div>
 
-        {activeTracking && (
+        {showBus && activeTracking && (
           <div className="border-t border-gray-100 px-5 py-4">
             <div className="rounded-xl bg-green-50 p-4">
               <div className="mb-2 flex items-center justify-between">
@@ -162,13 +176,31 @@ const FullScreenMap = ({ onClose, initialRouteIndex = 0 }: FullScreenMapProps) =
                 {activeRoute?.from} → {activeRoute?.to}
               </p>
               <div className="space-y-2 text-sm">
+                {activeTracking.previousStopName && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Previous Stop</span>
+                    <span className="font-medium">{activeTracking.previousStopName}</span>
+                  </div>
+                )}
+                {activeTracking.currentStopName && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Current Stop</span>
+                    <span className="font-medium text-green-700">{activeTracking.currentStopName}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-500">Next Stop</span>
-                  <span className="font-medium">{activeTracking.nextStop || "N/A"}</span>
+                  <span className="font-medium">{activeTracking.nextStopName || "N/A"}</span>
                 </div>
+                {activeTracking.distanceToNextStop !== null && activeTracking.distanceToNextStop !== undefined && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Distance</span>
+                    <span className="font-medium">{formatDistance(activeTracking.distanceToNextStop)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Status</span>
-                  <span className="font-medium text-primary">{activeTracking.eta || "N/A"}</span>
+                  <span className="text-gray-500">ETA</span>
+                  <span className="font-medium text-primary">{formatETA(activeTracking.etaToNextStop)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Speed</span>
@@ -184,19 +216,23 @@ const FullScreenMap = ({ onClose, initialRouteIndex = 0 }: FullScreenMapProps) =
         <MapView
           center={mapCenter}
           routeCoordinates={activeRouteCoords}
+          namedStops={namedStops}
           routeLabel={
             activeRoute ? `${activeRoute.from} → ${activeRoute.to}` : undefined
           }
-          showBus={!!activeTracking}
+          showBus={showBus}
           busPosition={
-            activeTracking
+            showBus && activeTracking
               ? [activeTracking.latitude, activeTracking.longitude]
               : undefined
           }
           busName={activeTracking?.bus?.busNumber || "Bus"}
           speed={activeTracking?.speed}
-          eta={activeTracking?.eta}
-          nextStop={activeTracking?.nextStop}
+          eta={activeTracking?.etaToNextStop}
+          distanceToNextStop={activeTracking?.distanceToNextStop}
+          nextStop={activeTracking?.nextStopName}
+          currentStop={activeTracking?.currentStopName}
+          previousStop={activeTracking?.previousStopName}
           fullScreen
         />
       </div>

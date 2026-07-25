@@ -6,7 +6,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/context/AuthContext";
-import { fetchApi, RouteData, RouteResponse, NamedStop, RouteStop, BusData, BusesResponse } from "@/utils/api";
+import { fetchApi, RouteData, RouteResponse, NamedStop, RouteStop, BusData, BusesResponse, fetchStopsByRoute } from "@/utils/api";
 import PageHeader from "@/component/ui/PageHeader";
 import Modal from "@/component/ui/Modal";
 import ConfirmDialog from "@/component/ui/ConfirmDialog";
@@ -74,7 +74,7 @@ export default function RoutesPage() {
 
   const openEdit = (route: RouteData) => {
     setEditingRoute(route);
-    setNamedStops([]); // Wait for map interaction
+    setNamedStops([]);
     reset({
       routeNo: route.routeNo,
       from: route.from,
@@ -88,6 +88,17 @@ export default function RoutesPage() {
       ),
     });
     setShowModal(true);
+
+    fetchStopsByRoute(route._id).then((data) => {
+      if (data?.stops && data.stops.length >= 2) {
+        setNamedStops(data.stops.map((s) => ({ name: s.name, lat: s.lat, lng: s.lng })));
+      } else {
+        const mapped = (route.stops || [])
+          .filter((s): s is RouteStop & { lat: number; lng: number } => typeof s.lat === "number" && typeof s.lng === "number")
+          .map((s) => ({ name: s.name, lat: s.lat!, lng: s.lng! }));
+        if (mapped.length >= 2) setNamedStops(mapped);
+      }
+    }).catch(console.error);
   };
 
   const openView = (route: RouteData) => {

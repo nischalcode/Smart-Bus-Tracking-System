@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapPin, Trash2, Undo2 } from "lucide-react";
@@ -15,6 +15,7 @@ import {
 } from "react-leaflet";
 
 import { NamedStop } from "@/utils/api";
+import { fetchRoadRoute } from "@/utils/routing";
 
 // ── Leaflet icon fix ──────────────────────────────────────────────────────────
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -72,6 +73,27 @@ export default function RouteMapPicker({ value, onChange }: RouteMapPickerProps)
   const [stopName, setStopName] = useState("");
   const [nameError, setNameError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const [roadPath, setRoadPath] = useState<[number, number][] | null>(null);
+
+  // Fetch road-snapped route from OSRM when stops change
+  useEffect(() => {
+    if (value.length < 2) {
+      setRoadPath(null);
+      return;
+    }
+    const coords: [number, number][] = value.map((s) => [s.lat, s.lng]);
+    let cancelled = false;
+
+    fetchRoadRoute(coords).then((road) => {
+      if (!cancelled && road) {
+        setRoadPath(road);
+      } else {
+        setRoadPath(null);
+      }
+    });
+
+    return () => { cancelled = true; };
+  }, [value]);
 
   // Fired when user clicks the map
   const handlePendingPoint = (p: PendingPoint) => {
@@ -218,13 +240,18 @@ export default function RouteMapPicker({ value, onChange }: RouteMapPickerProps)
 
           <ClickHandler onPendingPoint={handlePendingPoint} />
 
-          {/* Confirmed route polyline */}
-          {polylinePositions.length > 1 && (
-            <Polyline
-              positions={polylinePositions}
-              pathOptions={{ color: "#16a34a", weight: 5 }}
-            />
-          )}
+          {/* Confirmed route polyline — road-snapped via OSRM, fallback to straight lines */}
+          {(() => {
+            const positions = roadPath
+              ? roadPath.map((c) => [c[0], c[1]] as [number, number])
+              : polylinePositions;
+            return positions.length > 1 ? (
+              <Polyline
+                positions={positions}
+                pathOptions={{ color: "#16a34a", weight: 5 }}
+              />
+            ) : null;
+          })()}
 
           {/* Confirmed stop markers */}
           {value.map((stop, index) => {

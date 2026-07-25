@@ -262,6 +262,7 @@ export class BusController {
 
       if (bus.assignedRoute) {
         await RouteModel.findByIdAndUpdate(bus.assignedRoute, {
+          $pull: { assignedBuses: bus._id },
           assignedBus: null,
           busAssigned: false,
         });
@@ -321,8 +322,8 @@ export class BusController {
       const { id } = req.params;
       const { status } = req.body;
 
-      if (!status || !["Active", "Inactive", "Maintenance"].includes(status)) {
-        res.status(400).json({ success: false, message: "Invalid status. Must be Active, Inactive, or Maintenance." });
+      if (!status || !["Active", "Inactive", "Maintenance", "offline"].includes(status)) {
+        res.status(400).json({ success: false, message: "Invalid status. Must be Active, Inactive, Maintenance, or offline." });
         return;
       }
 

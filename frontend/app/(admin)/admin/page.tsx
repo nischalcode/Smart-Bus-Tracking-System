@@ -19,10 +19,11 @@ import {
   Bell,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { fetchApi, StatsData, NotificationData, NotificationsResponse } from "@/utils/api";
+import { fetchApi, StatsData, NotificationData, NotificationsResponse, NamedStop, fetchStopsByRoute } from "@/utils/api";
 import LoadingSpinner from "@/component/ui/LoadingSpinner";
 import MapView from "@/component/LiveTracking/MapView";
 import { useLiveTracking } from "@/hooks/useLiveTracking";
+import { formatDistance, formatETA } from "@/utils/geo";
 import DashboardCards from "@/component/admin/DashboardCards";
 import AnalyticsCharts from "@/component/admin/AnalyticsCharts";
 import QuickActions from "@/component/admin/QuickActions";
@@ -36,6 +37,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const { routes, trackingByRouteId, tracking } = useLiveTracking();
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  const [namedStops, setNamedStops] = useState<NamedStop[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -49,6 +51,18 @@ export default function AdminDashboard() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [token]);
+
+  const activeRoute = routes[selectedIndex];
+  
+  useEffect(() => {
+    if (!activeRoute?._id) return;
+
+    fetchStopsByRoute(activeRoute._id)
+      .then((data) => {
+        setNamedStops(data?.stops || []);
+      })
+      .catch(console.error);
+  }, [activeRoute?._id]);
 
   if (loading) {
     return <LoadingSpinner size="lg" />;
@@ -69,9 +83,9 @@ export default function AdminDashboard() {
       : 0;
   const onTimePercent =
     stats.totalBuses > 0
-      ? Math.round(
+      ? Math.max(0, Math.round(
           ((stats.totalBuses - stats.delaysCount) / stats.totalBuses) * 100
-        )
+        ))
       : 100;
   const trackingPercent =
     stats.totalBuses > 0
@@ -119,11 +133,12 @@ export default function AdminDashboard() {
     day: "numeric",
   });
 
-  const activeRoute = routes[selectedIndex];
   const activeRouteCoords = activeRoute?.pathCoordinates || [];
   const activeTracking = activeRoute
     ? trackingByRouteId.get(activeRoute._id)
     : undefined;
+
+  const showBus = !!activeTracking && activeTracking.status === "Live";
 
   const mapCenter: [number, number] | undefined = activeTracking
     ? [activeTracking.latitude, activeTracking.longitude]
@@ -169,19 +184,23 @@ export default function AdminDashboard() {
           <MapView
             center={mapCenter}
             routeCoordinates={activeRouteCoords}
+            namedStops={namedStops}
             routeLabel={
               activeRoute ? `${activeRoute.from} → ${activeRoute.to}` : undefined
             }
-            showBus={!!activeTracking}
+            showBus={showBus}
             busPosition={
-              activeTracking
+              showBus && activeTracking
                 ? [activeTracking.latitude, activeTracking.longitude]
                 : undefined
             }
             busName={activeTracking?.bus?.busNumber || "Bus"}
             speed={activeTracking?.speed}
-            eta={activeTracking?.eta}
-            nextStop={activeTracking?.nextStop}
+            eta={activeTracking?.etaToNextStop}
+            distanceToNextStop={activeTracking?.distanceToNextStop}
+            nextStop={activeTracking?.nextStopName}
+            currentStop={activeTracking?.currentStopName}
+            previousStop={activeTracking?.previousStopName}
           />
         </div>
 
@@ -235,16 +254,25 @@ export default function AdminDashboard() {
 
               <div className="space-y-2 rounded-xl bg-white/5 p-4 col-span-2">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-sidebar-muted">Live Bus Info</h4>
-                {activeTracking ? (
+                {activeTracking && showBus ? (
                   <div className="grid gap-3 sm:grid-cols-2 text-sm">
                     <div className="space-y-1">
                       <p className="flex items-center gap-1.5"><Bus className="h-4 w-4 text-primary" /> <span className="text-sidebar-muted">Bus No:</span> <strong className="text-foreground">{activeTracking.bus?.busNumber || "Bus"}</strong></p>
                       <p className="flex items-center gap-1.5"><User className="h-4 w-4 text-accent" /> <span className="text-sidebar-muted">Driver:</span> {activeTracking.driverName}</p>
                       <p className="flex items-center gap-1.5"><Gauge className="h-4 w-4 text-info" /> <span className="text-sidebar-muted">Speed:</span> {activeTracking.speed?.toFixed(0) || 0} km/h</p>
+                      {activeTracking.previousStopName && (
+                        <p className="flex items-center gap-1.5"><Navigation className="h-4 w-4 text-muted-foreground" /> <span className="text-sidebar-muted">Previous:</span> {activeTracking.previousStopName}</p>
+                      )}
                     </div>
                     <div className="space-y-1">
-                      <p className="flex items-center gap-1.5"><Navigation className="h-4 w-4 text-success" /> <span className="text-sidebar-muted">Next Stop:</span> {activeTracking.nextStop || "N/A"}</p>
-                      <p className="flex items-center gap-1.5"><Clock className="h-4 w-4 text-warning" /> <span className="text-sidebar-muted">ETA:</span> {activeTracking.eta || "N/A"}</p>
+                      {activeTracking.currentStopName && (
+                        <p className="flex items-center gap-1.5"><MapPin className="h-4 w-4 text-success" /> <span className="text-sidebar-muted">Current:</span> {activeTracking.currentStopName}</p>
+                      )}
+                      <p className="flex items-center gap-1.5"><Navigation className="h-4 w-4 text-success" /> <span className="text-sidebar-muted">Next Stop:</span> {activeTracking.nextStopName || "N/A"}</p>
+                      {activeTracking.distanceToNextStop !== null && activeTracking.distanceToNextStop !== undefined && (
+                        <p className="flex items-center gap-1.5"><TrendingUp className="h-4 w-4 text-info" /> <span className="text-sidebar-muted">Distance:</span> {formatDistance(activeTracking.distanceToNextStop)}</p>
+                      )}
+                      <p className="flex items-center gap-1.5"><Clock className="h-4 w-4 text-warning" /> <span className="text-sidebar-muted">ETA:</span> {formatETA(activeTracking.etaToNextStop)}</p>
                       <p className="flex items-center gap-1.5"><Zap className="h-4 w-4 text-primary" /> <span className="text-sidebar-muted">Status:</span> <span className="text-green-400 font-semibold">{activeTracking.status}</span></p>
                     </div>
                   </div>

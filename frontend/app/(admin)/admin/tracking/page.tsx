@@ -13,7 +13,10 @@ import {
   BusData,
   RouteData,
   RoutesResponse,
+  NamedStop,
+  fetchStopsByRoute,
 } from "@/utils/api";
+import { formatDistance, formatETA } from "@/utils/geo";
 import DataTable, { Column } from "@/component/ui/DataTable";
 import PageHeader from "@/component/ui/PageHeader";
 import Modal from "@/component/ui/Modal";
@@ -42,6 +45,7 @@ export default function TrackingPage() {
   const [deletingTracking, setDeletingTracking] = useState<TrackingData | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [namedStops, setNamedStops] = useState<NamedStop[]>([]);
 
   const {
     register,
@@ -52,16 +56,10 @@ export default function TrackingPage() {
     resolver: zodResolver(trackingSchema),
   });
 
-  const fetchAll = async () => {
+  const fetchTracking = async () => {
     try {
-      const [trackRes, busRes, routeRes] = await Promise.all([
-        fetchApi<TrackingResponse>("/tracking", {}, token ?? undefined),
-        fetchApi<{ success: boolean; buses: BusData[] }>("/buses", {}, token ?? undefined),
-        fetchApi<RoutesResponse>("/routes", {}, token ?? undefined),
-      ]);
+      const trackRes = await fetchApi<TrackingResponse>("/tracking", {}, token ?? undefined);
       setTracking(trackRes.tracking);
-      setBuses(busRes.buses);
-      setRoutes(routeRes.routes);
       setSelectedId((prev) => prev ?? trackRes.tracking[0]?._id ?? null);
     } catch (err) {
       console.error(err);
@@ -70,9 +68,23 @@ export default function TrackingPage() {
     }
   };
 
+  const fetchReferenceData = async () => {
+    try {
+      const [busRes, routeRes] = await Promise.all([
+        fetchApi<{ success: boolean; buses: BusData[] }>("/buses", {}, token ?? undefined),
+        fetchApi<RoutesResponse>("/routes", {}, token ?? undefined),
+      ]);
+      setBuses(busRes.buses);
+      setRoutes(routeRes.routes);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
-    fetchAll();
-    const id = setInterval(fetchAll, 5000);
+    fetchTracking();
+    fetchReferenceData();
+    const id = setInterval(fetchTracking, 5000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
@@ -92,7 +104,8 @@ export default function TrackingPage() {
       );
       setShowModal(false);
       reset();
-      fetchAll();
+      fetchTracking();
+      fetchReferenceData();
     } catch (err) {
       console.error(err);
     } finally {
@@ -111,7 +124,7 @@ export default function TrackingPage() {
       await fetchApi(`/tracking/${deletingTracking._id}`, { method: "DELETE" }, token ?? undefined);
       setShowDeleteConfirm(false);
       setDeletingTracking(null);
-      fetchAll();
+      fetchTracking();
     } catch (err) {
       console.error(err);
     }
@@ -133,6 +146,17 @@ export default function TrackingPage() {
     ? routes.find((r) => r._id === selected.route?._id)
     : undefined;
   const routeCoords = selectedRoute?.pathCoordinates ?? [];
+  const showBus = !!selected && selected.status === "Live";
+
+  // Fetch stops for the selected route
+  useEffect(() => {
+    if (!selectedRoute?._id) return;
+    fetchStopsByRoute(selectedRoute._id)
+      .then((data) => {
+        setNamedStops(data?.stops || []);
+      })
+      .catch(console.error);
+  }, [selectedRoute?._id]);
 
   const columns: Column<TrackingData & Record<string, unknown>>[] = [
     {
@@ -154,8 +178,16 @@ export default function TrackingPage() {
       label: "Speed",
       render: (item) => `${(item as unknown as TrackingData).speed} km/h`,
     },
-    { key: "nextStop", label: "Next Stop" },
-    { key: "eta", label: "ETA" },
+    {
+      key: "nextStop",
+      label: "Next Stop",
+      render: (item) => (item as unknown as TrackingData).nextStopName || "—",
+    },
+    {
+      key: "eta",
+      label: "ETA",
+      render: (item) => formatETA((item as unknown as TrackingData).etaToNextStop),
+    },
     {
       key: "status",
       label: "Status",
@@ -210,15 +242,19 @@ export default function TrackingPage() {
                 selected ? [selected.latitude, selected.longitude] : routeCoords[0]
               }
               routeCoordinates={routeCoords}
+              namedStops={namedStops}
               routeLabel={
                 selectedRoute ? `${selectedRoute.from} → ${selectedRoute.to}` : undefined
               }
-              showBus={!!selected}
-              busPosition={selected ? [selected.latitude, selected.longitude] : undefined}
+              showBus={showBus}
+              busPosition={showBus && selected ? [selected.latitude, selected.longitude] : undefined}
               busName={selected?.bus?.busNumber || "Bus"}
               speed={selected?.speed}
-              eta={selected?.eta}
-              nextStop={selected?.nextStop}
+              eta={selected?.etaToNextStop}
+              distanceToNextStop={selected?.distanceToNextStop}
+              nextStop={selected?.nextStopName}
+              currentStop={selected?.currentStopName}
+              previousStop={selected?.previousStopName}
             />
           </div>
           {tracking.length === 0 && (

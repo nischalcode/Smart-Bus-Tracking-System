@@ -22,16 +22,18 @@ const LiveTracking = () => {
 
   const sidebarRoutes = useMemo(() => {
     return routes.map((r, idx) => {
-      const tracking = trackingByRouteId.get(r._id);
+      const trackingData = trackingByRouteId.get(r._id);
+      // Only show route if it has active tracking
+      const hasTracking = trackingData && trackingData.status === "Live";
 
       return {
         number: r.routeNo,
         route: `${r.from} → ${r.to}`,
         frequency: `Every ${r.frequency}`,
-        status: tracking?.status || r.status,
+        status: trackingData?.status || r.status,
         color: r.color || 'bg-primary text-white',
         active: idx === selectedIndex,
-        hasTracking: !!tracking,
+        hasTracking: !!hasTracking,
       };
     });
   }, [routes, selectedIndex, trackingByRouteId]);
@@ -41,6 +43,9 @@ const LiveTracking = () => {
   const activeTracking = activeRoute
     ? trackingByRouteId.get(activeRoute._id)
     : undefined;
+
+  // Only show bus if tracking is live
+  const showBus = activeTracking && activeTracking.status === "Live";
 
   useEffect(() => {
     if (!activeRoute?._id) return;
@@ -90,16 +95,19 @@ const LiveTracking = () => {
                   ? `${activeRoute.from} → ${activeRoute.to}`
                   : undefined
               }
-              showBus={!!activeTracking}
+              showBus={showBus}
               busPosition={
-                activeTracking
+                showBus && activeTracking
                   ? [activeTracking.latitude, activeTracking.longitude]
                   : undefined
               }
               busName={activeTracking?.bus?.busNumber || 'Bus'}
               speed={activeTracking?.speed}
-              eta={activeTracking?.eta}
-              nextStop={activeTracking?.nextStop}
+              eta={activeTracking?.etaToNextStop}
+              distanceToNextStop={activeTracking?.distanceToNextStop}
+              nextStop={activeTracking?.nextStopName}
+              currentStop={activeTracking?.currentStopName}
+              previousStop={activeTracking?.previousStopName}
             />
           </div>
         </div>

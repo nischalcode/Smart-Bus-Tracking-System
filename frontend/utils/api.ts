@@ -153,6 +153,7 @@ export interface BusData {
   modelName?: string;
   capacity?: number;
   status: string;
+  location?: { lat: number; lng: number; updatedAt: string };
 
   activeDriver?: DriverData | string;
   assignedDrivers?: DriverData[];
@@ -171,11 +172,25 @@ export interface TrackingData {
   latitude: number;
   longitude: number;
   speed: number;
+  status: string;
+  driverName?: string;
+  
+  // Stop tracking (geofence-based)
+  currentStopIndex: number;
+  currentStopName: string | null;
+  nextStopIndex: number;
+  nextStopName: string | null;
+  previousStopIndex: number;
+  previousStopName: string | null;
+  
+  // Distance & ETA calculations
+  distanceToNextStop: number | null; // Distance in meters
+  etaToNextStop: number | null; // ETA in minutes
+  
+  // Legacy fields (for backwards compatibility)
   nextStop?: string;
   eta?: string;
-  status: string;
-  currentIndex: number;
-  driverName?: string;
+  currentIndex?: number;
 }
 
 export interface TrackingResponse {

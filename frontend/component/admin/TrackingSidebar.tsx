@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Search, Gauge } from "lucide-react";
 import type { TrackingData } from "@/utils/api";
+import { formatETA, formatDistance } from "@/utils/geo";
 import StatusBadge from "@/component/ui/StatusBadge";
 
 interface TrackingSidebarProps {
@@ -70,11 +71,23 @@ export default function TrackingSidebar({ tracking, selectedId, onSelect }: Trac
               <p className="mt-1 text-xs text-muted-foreground">
                 {t.route?.routeNo} • {t.route?.from} → {t.route?.to}
               </p>
-              <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-                <Gauge className="h-3.5 w-3.5" />
-                {t.speed?.toFixed(0) ?? 0} km/h
-                {t.eta && <span>• ETA {t.eta}</span>}
+              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Gauge className="h-3.5 w-3.5" />
+                  {t.speed?.toFixed(0) ?? 0} km/h
+                </span>
+                {t.nextStopName && (
+                  <span>• Next: {t.nextStopName}</span>
+                )}
+                {t.etaToNextStop !== null && t.etaToNextStop !== undefined && (
+                  <span>• ETA {formatETA(t.etaToNextStop)}</span>
+                )}
               </div>
+              {t.distanceToNextStop !== null && t.distanceToNextStop !== undefined && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Distance: {formatDistance(t.distanceToNextStop)}
+                </p>
+              )}
             </button>
           ))
         )}

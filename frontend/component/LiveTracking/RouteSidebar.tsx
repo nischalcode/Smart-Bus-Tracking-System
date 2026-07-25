@@ -61,7 +61,7 @@ const RouteSidebar = ({
         <div className="relative mb-8">
           <input
             type="text"
-            value={localSearch}
+            value={externalQuery ?? localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
             placeholder={t('tracking.search_placeholder')}
             className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 py-3 pl-4 pr-10 text-sm dark:text-white outline-none focus:border-primary focus:ring-2 focus:ring-primary transition-colors"

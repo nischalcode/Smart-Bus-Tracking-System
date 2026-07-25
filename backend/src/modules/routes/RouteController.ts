@@ -3,6 +3,7 @@ import RouteModel from "./RouteModel.js";
 import BusModel from "../buses/BusModel.js";
 import StopModel from "../stops/StopModel.js";
 import ScheduleModel from "../schedules/ScheduleModel.js";
+import TrackingModel from "../tracking/TrackingModel.js";
 
 export class RouteController {
   private async syncRouteSchedules(routeId: string, busIds: string[], frequency: string): Promise<void> {
@@ -264,6 +265,7 @@ export class RouteController {
       await route.deleteOne();
       await StopModel.findOneAndDelete({ routeId: id } as any);
       await ScheduleModel.deleteMany({ route: id } as any);
+      await TrackingModel.deleteMany({ routeId: id } as any);
       res.status(200).json({ success: true, message: "Route deleted successfully." });
     } catch (error) {
       next(error);

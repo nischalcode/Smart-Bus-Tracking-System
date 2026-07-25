@@ -1,38 +1,20 @@
 import TrackingModel from "./TrackingModel.js";
 import { getIO } from "../../socket/index.js";
-// backend/src/modules/tracking/TrackingModel.ts
 
-import { Schema, model } from "mongoose";
-
-const trackingSchema = new Schema(
-  {
-    driverId: { type: String, required: true },
-    driverName: { type: String, required: true },
-    busId: { type: Schema.Types.ObjectId, ref: "Bus", required: true },
-    busNo: { type: String, required: true },
-    routeId: { type: Schema.Types.ObjectId, ref: "Route", required: true },
-    routeName: { type: String, required: true },
-    direction: { type: String, enum: ["Going", "Coming"], default: "Going" },
-    latitude: { type: Number, required: true },
-    longitude: { type: Number, required: true },
-    accuracy: { type: Number, default: 0 },
-    speed: { type: Number, default: 0 },
-    timestamp: { type: Date, default: Date.now },
-    bus: { type: Schema.Types.ObjectId, ref: "Bus" },
-    route: { type: Schema.Types.ObjectId, ref: "Route" },
-    status: { type: String, default: "Live" },
-    
-    // 👇 ADD THESE THREE MISSING FIELDS 👇
-    currentIndex: { type: Number, default: 0 },
-    eta: { type: String },
-    nextStop: { type: String },
-  },
-  { timestamps: true }
-);
-
-// ... rest of the file
 const OSRM_BASE = "https://router.project-osrm.org/route/v1/driving";
 const denseRouteCache = new Map<string, [number, number][]>();
+const MAX_CACHE_SIZE = 50;
+
+// Target: full route in ~10 minutes at 10-second ticks = 60 ticks
+const TICKS_PER_ROUTE = 60;
+
+function cacheRoute(key: string, value: [number, number][]): void {
+  if (denseRouteCache.size >= MAX_CACHE_SIZE) {
+    const firstKey = denseRouteCache.keys().next().value;
+    if (firstKey) denseRouteCache.delete(firstKey);
+  }
+  denseRouteCache.set(key, value);
+}
 
 async function fetchRoute(waypoints: [number, number][]): Promise<[number, number][] | null> {
   if (waypoints.length < 2) return null;
@@ -41,7 +23,7 @@ async function fetchRoute(waypoints: [number, number][]): Promise<[number, numbe
   try {
     const res = await fetch(url);
     if (!res.ok) return null;
-    const data = await res.json();
+    const data: any = await res.json();
     const route = data.routes?.[0];
     if (!route?.geometry?.coordinates) return null;
     return route.geometry.coordinates.map((c: [number, number]) => [c[1], c[0]]);
@@ -50,12 +32,40 @@ async function fetchRoute(waypoints: [number, number][]): Promise<[number, numbe
   }
 }
 
+/**
+ * Convert a route fraction (0–1) into [lat, lng] on the given path.
+ * Finds which segment the fraction falls into and linearly interpolates.
+ */
+function positionFromFraction(
+  path: [number, number][],
+  fraction: number
+): [number, number] {
+  if (path.length === 0) return [0, 0];
+  if (path.length === 1) return path[0]!;
+  if (fraction <= 0) return path[0]!;
+  if (fraction >= 1) return path[path.length - 1]!;
+
+  const scaledIndex = fraction * (path.length - 1);
+  const lo = Math.floor(scaledIndex);
+  const hi = Math.min(lo + 1, path.length - 1);
+  const t = scaledIndex - lo;
+  const loCoord = path[lo]!;
+  const hiCoord = path[hi]!;
+
+  return [
+    loCoord[0] + t * (hiCoord[0] - loCoord[0]),
+    loCoord[1] + t * (hiCoord[1] - loCoord[1]),
+  ];
+}
+
 export const startTrackingSimulation = (): void => {
   console.log("Initializing GPS Live Tracking Simulator...");
 
   setInterval(async () => {
     try {
-      const trackingRecords = await TrackingModel.find({}).populate("route"); 
+      const trackingRecords = await TrackingModel.find({
+        status: "Live",
+      }).populate("route");
 
       const bulkOps: any[] = [];
 
@@ -65,67 +75,69 @@ export const startTrackingSimulation = (): void => {
           continue;
         }
 
+        // Skip records updated recently by real telemetry (within last 30 seconds)
+        const lastUpdate = (track as any).updatedAt || track.timestamp;
+        if (lastUpdate) {
+          const timeSinceUpdate = Date.now() - new Date(lastUpdate).getTime();
+          if (timeSinceUpdate < 30000) continue;
+        }
+
         const routeIdStr = route._id.toString();
         let path = denseRouteCache.get(routeIdStr);
-        
+
         if (!path) {
-           path = await fetchRoute(route.pathCoordinates);
-           if (!path) {
-              path = route.pathCoordinates; // Fallback to sparse
+           const fetchedPath = await fetchRoute(route.pathCoordinates);
+           if (fetchedPath) {
+               cacheRoute(routeIdStr, fetchedPath);
+              path = fetchedPath;
            } else {
-              denseRouteCache.set(routeIdStr, path);
+              path = route.pathCoordinates;
            }
         }
 
         if (!path || path.length === 0) continue;
 
-        let currentIndex = (track as any).currentIndex || 0;
-        
-        // Skip if already completed
-        if (track.status === "Completed" && currentIndex >= path.length - 1) {
+        // Convert stored currentIndex (which may be from a different path density)
+        // into a route fraction (0–1) using the original sparse pathCoordinates.
+        const sparsePath = route.pathCoordinates;
+        const storedIndex = (track as any).currentIndex || 0;
+        const fraction = sparsePath.length > 1
+          ? Math.min(storedIndex / (sparsePath.length - 1), 1)
+          : 0;
+
+        if ((track as any).status === "Completed" && fraction >= 1) {
           continue;
         }
 
-        let step = path.length > route.pathCoordinates.length ? 5 : 1; 
-        let nextIndex = currentIndex + step;
-        
+        // Proportional step: advance by 1/TICKS_PER_ROUTE of the total journey each tick
+        const fractionStep = 1 / TICKS_PER_ROUTE;
+        const nextFraction = Math.min(fraction + fractionStep, 1);
+
+        // Find the position on the current (possibly dense) path
+        const [lat, lng] = positionFromFraction(path, nextFraction);
+
+        // Convert fraction back to a dense-path index for storage
+        const nextIndex = Math.round(nextFraction * (path.length - 1));
+
         let speed = Math.floor(Math.random() * 25) + 20;
         let status = "Live";
-        
-        if (nextIndex >= path.length - 1) {
-          nextIndex = path.length - 1; // Stay at the end
-          speed = 0; // Bus is not running anymore
+
+        if (nextFraction >= 1) {
+          speed = 0;
           status = "Completed";
-        }
-
-        const [lat, lng] = path[nextIndex] as [number, number];
-        
-        // Calculate ETA and next stop based on original stops
-        const progressRatio = nextIndex / (path.length - 1 || 1);
-        const stopsLeft = Math.max(0, Math.floor((1 - progressRatio) * (route.stops?.length || 0)));
-        const etaVal = stopsLeft * 3 + 2;
-        const eta = status === "Completed" ? "Arrived" : `${etaVal} min away`;
-
-        let nextStop = "Terminal Stop";
-        if (route.stops && route.stops.length > 0) {
-          const stopIndex = Math.min(
-            Math.floor(progressRatio * route.stops.length) + 1,
-            route.stops.length - 1
-          );
-          nextStop = route.stops[stopIndex]?.name || "Terminal Stop";
         }
 
         bulkOps.push({
           updateOne: {
             filter: { _id: track._id },
             update: {
-              latitude: lat,
-              longitude: lng,
-              speed,
-              eta,
-              nextStop,
-              status,
-              currentIndex: nextIndex,
+              $set: {
+                latitude: lat,
+                longitude: lng,
+                speed,
+                status,
+                currentIndex: nextIndex,
+              },
             },
           },
         });
@@ -134,13 +146,14 @@ export const startTrackingSimulation = (): void => {
       if (bulkOps.length > 0) {
         await TrackingModel.bulkWrite(bulkOps);
 
-        const updatedTracking = await TrackingModel.find({})
+        const updatedTracking = await TrackingModel.find({ status: "Live" } as any)
           .populate("bus")
           .populate("route");
 
-        // Emit live updates to all connected clients
         const io = getIO();
-        io.emit("tracking-update", updatedTracking);
+        if (io) {
+          io.emit("tracking-update", updatedTracking);
+        }
       }
     } catch (error: any) {
       console.error("GPS Simulator Loop Error:", error.message);

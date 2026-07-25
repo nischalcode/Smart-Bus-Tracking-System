@@ -43,7 +43,7 @@ export default function RealtimeLogs({ tracking }: RealtimeLogsProps) {
         next.push({
           id: `${t._id}-${now.getTime()}-stop`,
           time,
-          text: `${busNumber} stopped near ${t.nextStop || "a stop"}`,
+          text: `${busNumber} stopped near ${t.nextStopName || t.currentStopName || "a stop"}`,
           kind: "stop",
         });
       } else if (t.status?.toLowerCase().includes("delay")) {
@@ -57,7 +57,7 @@ export default function RealtimeLogs({ tracking }: RealtimeLogsProps) {
         next.push({
           id: `${t._id}-${now.getTime()}-move`,
           time,
-          text: `${busNumber} at ${t.speed.toFixed(0)} km/h, ETA ${t.eta || "—"}`,
+          text: `${busNumber} at ${t.speed?.toFixed(0) ?? 0} km/h, Next: ${t.nextStopName || "—"}`,
           kind: "move",
         });
       }

@@ -10,6 +10,7 @@ import {
 } from "@/utils/api";
 
 const POLL_INTERVAL_MS = 5000;
+const ROUTES_REFRESH_MS = 60000;
 
 export function useLiveTracking() {
   const [routes, setRoutes] = useState<RouteData[]>([]);
@@ -18,12 +19,25 @@ export function useLiveTracking() {
   const [loadingTracking, setLoadingTracking] = useState(true);
 
   useEffect(() => {
-    fetchApi<RoutesResponse>("/routes")
-      .then((data) => {
-        if (data.success && data.routes) setRoutes(data.routes);
-      })
-      .catch((err) => console.error("Failed to load routes:", err))
-      .finally(() => setLoadingRoutes(false));
+    let mounted = true;
+
+    const fetchRoutes = () => {
+      fetchApi<RoutesResponse>("/routes")
+        .then((data) => {
+          if (!mounted) return;
+          if (data.success && data.routes) setRoutes(data.routes);
+        })
+        .catch((err) => console.error("Failed to load routes:", err))
+        .finally(() => { if (mounted) setLoadingRoutes(false); });
+    };
+
+    fetchRoutes();
+    const id = setInterval(fetchRoutes, ROUTES_REFRESH_MS);
+
+    return () => {
+      mounted = false;
+      clearInterval(id);
+    };
   }, []);
 
   useEffect(() => {

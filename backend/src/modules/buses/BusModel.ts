@@ -7,7 +7,7 @@ const busSchema = new Schema(
     capacity: { type: Number },
     status: {
       type: String,
-      enum: ["Active", "Maintenance", "Inactive", "active", "inactive", "maintenance", "offline"],
+      enum: ["Active", "Maintenance", "Inactive", "offline"],
       default: "Active",
     },
     location: {

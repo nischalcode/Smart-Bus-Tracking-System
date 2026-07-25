@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import BusSearchHeader from "@/component/head/BusSearchHeader";
 import dynamic from "next/dynamic";
 const MapView = dynamic(() => import("@/component/LiveTracking/MapView"), { ssr: false });
@@ -9,6 +9,7 @@ import RouteSidebar from "@/component/LiveTracking/RouteSidebar";
 import Stats from "@/component/stats/Stats";
 import TrackLayout from "@/component/track-layout/TrackLayout";
 import { useLiveTracking } from "@/hooks/useLiveTracking";
+import { NamedStop, fetchStopsByRoute } from "@/utils/api";
 
 export default function Page() {
   const { routes, loadingRoutes, trackingByRouteId } = useLiveTracking();
@@ -16,12 +17,26 @@ export default function Page() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRouteFilter, setSelectedRouteFilter] = useState("All Routes");
   const [showFullScreen, setShowFullScreen] = useState(false);
+  const [namedStops, setNamedStops] = useState<NamedStop[]>([]);
 
   const activeRoute = routes[selectedIndex];
   const activeRouteCoords = activeRoute?.pathCoordinates || [];
   const activeTracking = activeRoute
     ? trackingByRouteId.get(activeRoute._id)
     : undefined;
+
+  // Only show bus if tracking is live
+  const showBus = !!activeTracking && activeTracking.status === "Live";
+
+  // Fetch stops for the active route
+  useEffect(() => {
+    if (!activeRoute?._id) return;
+    fetchStopsByRoute(activeRoute._id)
+      .then((data) => {
+        setNamedStops(data?.stops || []);
+      })
+      .catch(console.error);
+  }, [activeRoute?._id]);
 
   const mapCenter: [number, number] | undefined = activeTracking
     ? [activeTracking.latitude, activeTracking.longitude]
@@ -32,6 +47,7 @@ export default function Page() {
   const sidebarRoutes = useMemo(() => {
     return routes.map((r, idx) => {
       const t = trackingByRouteId.get(r._id);
+      const hasTracking = t && t.status === "Live";
       let statusText = r.status;
       if (t) {
         statusText = t.status || r.status;
@@ -43,7 +59,7 @@ export default function Page() {
         status: statusText,
         color: r.color || "bg-primary text-white",
         active: idx === selectedIndex,
-        hasTracking: !!t,
+        hasTracking: !!hasTracking,
       };
     });
   }, [routes, selectedIndex, trackingByRouteId]);
@@ -90,19 +106,23 @@ export default function Page() {
           <MapView
             center={mapCenter}
             routeCoordinates={activeRouteCoords}
+            namedStops={namedStops}
             routeLabel={
               activeRoute ? `${activeRoute.from} → ${activeRoute.to}` : undefined
             }
-            showBus={!!activeTracking}
+            showBus={showBus}
             busPosition={
-              activeTracking
+              showBus && activeTracking
                 ? [activeTracking.latitude, activeTracking.longitude]
                 : undefined
             }
             busName={activeTracking?.bus?.busNumber || "Bus"}
             speed={activeTracking?.speed}
-            eta={activeTracking?.eta}
-            nextStop={activeTracking?.nextStop}
+            eta={activeTracking?.etaToNextStop}
+            distanceToNextStop={activeTracking?.distanceToNextStop}
+            nextStop={activeTracking?.nextStopName}
+            currentStop={activeTracking?.currentStopName}
+            previousStop={activeTracking?.previousStopName}
           />
         </div>
       </div>

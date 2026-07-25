@@ -28,14 +28,16 @@ export class DriverController {
       const queryDriverNo = String(driverNo).trim();
       const queryName = String(name).trim();
 
-      // Flexible query: matches driverId or licenseNumber + name (case-insensitive regex)
+      const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+      // Flexible query: matches driverId or licenseNumber + exact name
       const driver = await DriverModel.findOne({
         $or: [
           { driverId: queryDriverNo },
           { licenseNumber: queryDriverNo },
           { _id: queryDriverNo.match(/^[0-9a-fA-F]{24}$/) ? queryDriverNo : null },
         ],
-        name: { $regex: new RegExp(`^${queryName}$`, "i") },
+        name: { $regex: new RegExp(`^${escapeRegex(queryName)}$`, "i") },
       }).populate({
         path: "assignedBuses",
         populate: { path: "assignedRoute" },
@@ -165,11 +167,9 @@ export class DriverController {
         return;
       }
 
-      // const count = await DriverModel.countDocuments();
-
       const lastDriver = await DriverModel.findOne({
         driverId: /^DRV-\d+$/
-      }).sort({ driverId: -1 });
+      }).sort({ driverId: -1 }).lean();
 
       let next = 1;
 
@@ -179,16 +179,37 @@ export class DriverController {
 
       const driverId = `DRV-${String(next).padStart(4, "0")}`;
 
-      const driver = await DriverModel.create({
-        driverId,
-        name,
-        age,
-        phoneNumber,
-        email,
-        licenseNumber,
-        experienceYears: experienceYears ?? 0,
-        active: active ?? true,
-      });
+      let driver;
+      try {
+        driver = await DriverModel.create({
+          driverId,
+          name,
+          age,
+          phoneNumber,
+          email,
+          licenseNumber,
+          experienceYears: experienceYears ?? 0,
+          active: active ?? true,
+        });
+      } catch (createErr: any) {
+        if (createErr?.code === 11000) {
+          const retryLast = await DriverModel.findOne({ driverId: /^DRV-\d+$/ }).sort({ driverId: -1 }).lean();
+          const retryNext = retryLast?.driverId ? parseInt(retryLast.driverId.replace("DRV-", ""), 10) + 1 : next + 1;
+          const retryDriverId = `DRV-${String(retryNext).padStart(4, "0")}`;
+          driver = await DriverModel.create({
+            driverId: retryDriverId,
+            name,
+            age,
+            phoneNumber,
+            email,
+            licenseNumber,
+            experienceYears: experienceYears ?? 0,
+            active: active ?? true,
+          });
+        } else {
+          throw createErr;
+        }
+      }
 
       const populated = await DriverModel.findById(driver._id).populate("assignedBuses");
 
