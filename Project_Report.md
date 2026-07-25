@@ -126,7 +126,7 @@ The Class Diagram models the static structure. Key classes include:
 5. Passenger App receives the event and updates the bus marker on the Leaflet map.
 
 ### 3.8 Activity Diagram: Trip Execution
-- Start Node -> Driver Logs In -> Selects Route -> Starts Trip -> (Loop: System gets GPS -> Transmits to Server -> Waits 5s) -> Ends Trip -> End Node.
+- Start Node -> Driver Logs In -> Selects Route -> Starts Trcking -> (Loop: System gets GPS -> Transmits to Server -> Waits 5s) -> Stop tracking -> End Node.
 
 ---
 
@@ -177,7 +177,7 @@ Algorithm 1: GPS Data Transmission
 BEGIN
   Initialize Socket connection to Server
   On TripStart:
-    While (TripStatus == ACTIVE)
+    While (Bus == ACTIVE)
       Get CurrentLocation (Lat, Lng, Accuracy, Speed) from Device
       If Accuracy < 20 meters:
         Emit 'location_update' to Server with Data

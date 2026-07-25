@@ -18,6 +18,14 @@ const trackingSchema = new Schema(
     bus: { type: Schema.Types.ObjectId, ref: "Bus" },
     route: { type: Schema.Types.ObjectId, ref: "Route" },
     status: { type: String, default: "Live" },
+    
+    // Added for enhanced tracking
+    currentIndex: { type: Number, default: 0 },
+    eta: { type: String },
+    nextStop: { type: String },
+    currentStop: { type: String, default: null },
+    isStopped: { type: Boolean, default: false },
+    upcomingStops: { type: Array, default: [] },
   },
   { timestamps: true }
 );

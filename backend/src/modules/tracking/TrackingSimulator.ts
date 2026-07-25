@@ -1,34 +1,7 @@
 import TrackingModel from "./TrackingModel.js";
 import { getIO } from "../../socket/index.js";
-// backend/src/modules/tracking/TrackingModel.ts
-
-import { Schema, model } from "mongoose";
-  
-const trackingSchema = new Schema(
-  {
-    driverId: { type: String, required: true },
-    driverName: { type: String, required: true },
-    busId: { type: Schema.Types.ObjectId, ref: "Bus", required: true },
-    busNo: { type: String, required: true },
-    routeId: { type: Schema.Types.ObjectId, ref: "Route", required: true },
-    routeName: { type: String, required: true },
-    direction: { type: String, enum: ["Going", "Coming"], default: "Going" },
-    latitude: { type: Number, required: true },
-    longitude: { type: Number, required: true },
-    accuracy: { type: Number, default: 0 },
-    speed: { type: Number, default: 0 },
-    timestamp: { type: Date, default: Date.now },
-    bus: { type: Schema.Types.ObjectId, ref: "Bus" },
-    route: { type: Schema.Types.ObjectId, ref: "Route" },
-    status: { type: String, default: "Live" },
-    
-    // 👇 ADD THESE THREE MISSING FIELDS 👇
-    currentIndex: { type: Number, default: 0 },
-    eta: { type: String },
-    nextStop: { type: String },
-  },
-  { timestamps: true }
-);
+import { enrichTrackingData } from "../../utils/trackingLogic.js";
+import { calculateHaversineDistance } from "../../utils/haversine.js";
 
 // ... rest of the file
 export const startTrackingSimulation = (): void => {
@@ -47,25 +20,67 @@ export const startTrackingSimulation = (): void => {
         }
 
         const path = route.pathCoordinates;
-        let nextIndex = ((track as any).currentIndex || 0) + 1;
+        let nextIndex = (track as any).currentIndex || 0;
+        let direction = (track as any).direction || "Going";
+        let lat = track.latitude;
+        let lng = track.longitude;
+
         if (nextIndex >= path.length) {
-          nextIndex = 0;
+          nextIndex = path.length - 1;
         }
 
-        const [lat, lng] = path[nextIndex] as [number, number];
+        // Random speed between 20 and 45 km/h
         const speed = Math.floor(Math.random() * 25) + 20;
-        const stopsLeft = path.length - 1 - nextIndex;
-        const etaVal = stopsLeft * 3 + 2;
-        const eta = stopsLeft === 0 ? "Arriving" : `${etaVal} min away`;
+        
+        // Calculate distance to move in 10 seconds (10/3600 hours)
+        const distanceToMoveKm = (speed / 3600) * 10;
+        let targetLat = path[nextIndex][0];
+        let targetLng = path[nextIndex][1];
 
-        let nextStop = "Terminal Stop";
-        if (route.stops && route.stops.length > 0) {
-          const stopIndex = Math.min(
-            Math.floor((nextIndex / path.length) * route.stops.length),
-            route.stops.length - 1
-          );
-          nextStop = route.stops[stopIndex]?.name || "Terminal Stop";
+        let distToTarget = calculateHaversineDistance(lat, lng, targetLat, targetLng);
+
+        // If we reached the target or are very close (less than 10 meters)
+        if (distToTarget <= 0.01) {
+          if (direction === "Going") {
+            nextIndex++;
+            if (nextIndex >= path.length) {
+              direction = "Coming";
+              nextIndex = path.length - 2;
+              if (nextIndex < 0) nextIndex = 0;
+            }
+          } else {
+            nextIndex--;
+            if (nextIndex < 0) {
+              direction = "Going";
+              nextIndex = 1;
+              if (nextIndex >= path.length) nextIndex = 0;
+            }
+          }
+          // Update target to the next one
+          targetLat = path[nextIndex][0];
+          targetLng = path[nextIndex][1];
+          distToTarget = calculateHaversineDistance(lat, lng, targetLat, targetLng);
         }
+
+        // Interpolate position
+        if (distToTarget > 0.001) {
+          // Linear interpolation for small distances
+          const ratio = Math.min(1, distanceToMoveKm / distToTarget);
+          lat = lat + (targetLat - lat) * ratio;
+          lng = lng + (targetLng - lng) * ratio;
+        } else {
+          lat = targetLat;
+          lng = targetLng;
+        }
+
+        // Use the new trackingLogic to calculate ETAs, stops, and geofencing
+        const enrichment = enrichTrackingData(
+          lat, 
+          lng, 
+          speed, 
+          direction, 
+          route.stops || []
+        );
 
         bulkOps.push({
           updateOne: {
@@ -73,10 +88,14 @@ export const startTrackingSimulation = (): void => {
             update: {
               latitude: lat,
               longitude: lng,
-              speed,
-              eta,
-              nextStop,
+              speed: enrichment.isStopped ? 0 : speed,
+              direction: direction,
               currentIndex: nextIndex,
+              eta: enrichment.upcomingStops[0]?.etaString || "N/A",
+              nextStop: enrichment.nextStop || "Terminal",
+              currentStop: enrichment.currentStop,
+              isStopped: enrichment.isStopped,
+              upcomingStops: enrichment.upcomingStops
             },
           },
         });

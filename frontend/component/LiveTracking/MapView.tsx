@@ -142,6 +142,11 @@ interface MapViewProps {
   nextStop?: string;
   showBus?: boolean;
   fullScreen?: boolean;
+  autoSize?: boolean;
+  direction?: string;
+  isStopped?: boolean;
+  currentStop?: string | null;
+  upcomingStops?: { stopId: string; name: string; distanceKm: number; etaString: string }[];
 }
 
 const MapView = ({
@@ -156,6 +161,11 @@ const MapView = ({
   nextStop = "N/A",
   showBus = false,
   fullScreen = false,
+  autoSize = true,
+  direction = "Going",
+  isStopped = false,
+  currentStop = null,
+  upcomingStops = [],
 }: MapViewProps) => {
   
   useEffect(() => {
@@ -280,14 +290,27 @@ const MapView = ({
           />
         )}
 
-        {namedStops.map((stop, index) => (
-          <Marker
-            key={index}
-            position={[stop.lat, stop.lng]}
-          >
-            <Popup>{stop.name}</Popup>
-          </Marker>
-        ))}
+        {namedStops.map((stop, index) => {
+          const upcoming = upcomingStops?.find(u => u.name === stop.name);
+          return (
+            <Marker
+              key={index}
+              position={[stop.lat, stop.lng]}
+            >
+              <Popup>
+                <div>
+                  <h3 className="font-bold">{stop.name}</h3>
+                  {upcoming && (
+                    <>
+                      <p className="text-sm">Distance: {upcoming.distanceKm * 1000} m</p>
+                      <p className="text-sm">ETA: {upcoming.etaString}</p>
+                    </>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
         {showBus && busPosition && (
           <>
           
@@ -299,8 +322,8 @@ const MapView = ({
           <Popup>
             <div>
               <h3 className="font-bold">{busName}</h3>
-              <p>{routeLabel}</p>
-              <p>{eta}</p>
+              <p>{routeLabel} ({isStopped ? "Stopped" : `${speed} km/h`})</p>
+              <p>{isStopped && currentStop ? `Current Stop: ${currentStop}` : `Next Stop: ${nextStop}`}</p>
             </div>
           </Popup>
         </Marker>
@@ -377,18 +400,18 @@ const MapView = ({
 
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span>Next Stop</span>
-              <span>{nextStop}</span>
+              <span>{isStopped && currentStop ? "Current Stop" : "Next Stop"}</span>
+              <span>{isStopped && currentStop ? currentStop : nextStop}</span>
             </div>
 
             <div className="flex justify-between">
               <span>Status</span>
-              <span>{eta}</span>
+              <span>{isStopped ? "Arrived" : eta}</span>
             </div>
 
             <div className="flex justify-between">
               <span>Speed</span>
-              <span>{speed} km/h</span>
+              <span>{isStopped ? "Stopped" : `${speed} km/h`}</span>
             </div>
           </div>
         </div>

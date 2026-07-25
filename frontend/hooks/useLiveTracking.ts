@@ -8,6 +8,7 @@ import {
   TrackingResponse,
   TrackingData,
 } from "@/utils/api";
+import { io } from "socket.io-client";
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -49,6 +50,35 @@ export function useLiveTracking() {
     return () => {
       mounted = false;
       clearInterval(id);
+    };
+  }, []);
+
+  useEffect(() => {
+    const socketUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || "http://localhost:9006";
+    const socket = io(socketUrl);
+
+    socket.on("bus:location:updated", (data: any) => {
+      setTracking(prev => prev.map(t => {
+        const bId = typeof t.bus === "string" ? t.bus : t.bus?._id;
+        if (bId === data.busId || t.busId === data.busId) {
+          return { 
+            ...t, 
+            latitude: data.lat, 
+            longitude: data.lng, 
+            speed: data.speed ?? t.speed,
+            eta: data.eta !== undefined ? data.eta : t.eta,
+            nextStop: data.nextStop !== undefined ? data.nextStop : t.nextStop,
+            currentStop: data.currentStop !== undefined ? data.currentStop : t.currentStop,
+            isStopped: data.isStopped !== undefined ? data.isStopped : t.isStopped,
+            upcomingStops: data.upcomingStops || t.upcomingStops
+          };
+        }
+        return t;
+      }));
+    });
+
+    return () => {
+      socket.disconnect();
     };
   }, []);
 

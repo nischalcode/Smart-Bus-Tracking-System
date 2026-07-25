@@ -1,7 +1,5 @@
  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9006/api";
-//const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://sbts-backend.onrender.com/api";
 
-// Named stop — a waypoint with a human label and GPS coordinates
 export interface NamedStop {
   name: string;
   lat: number;
@@ -185,7 +183,11 @@ export interface TrackingData {
   routeName?: string;
 
   currentIndex?: number;
-  }
+  direction?: string;
+  upcomingStops?: { stopId: string, name: string, distanceKm: number, etaString: string }[];
+  currentStop?: string | null;
+  isStopped?: boolean;
+}
 
 export interface TrackingResponse {
   success: boolean;

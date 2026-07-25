@@ -6,7 +6,7 @@ import RouteSidebar from './RouteSidebar';
 import { useLiveTracking } from '@/hooks/useLiveTracking';
 import { NamedStop, fetchStopsByRoute } from '@/utils/api';
 import { useLanguage } from '@/context/LanguageContext';
-
+  
 const MapView = dynamic(() => import('./MapView'), {
   ssr: false,
   loading: () => (
@@ -80,26 +80,32 @@ const LiveTracking = () => {
             />
           )}
 
-          <MapView
-            center={mapCenter}
-            routeCoordinates={activeRouteCoords}
-            namedStops={namedStops}
-            routeLabel={
-              activeRoute
-                ? `${activeRoute.from} → ${activeRoute.to}`
-                : undefined
-            }
-            showBus={!!activeTracking}
-            busPosition={
-              activeTracking
-                ? [activeTracking.latitude, activeTracking.longitude]
-                : undefined
-            }
-            busName={`Bus ${activeTracking?.busNo || ''}`}
-            speed={activeTracking?.speed}
-            eta={activeTracking?.eta}
-            nextStop={activeTracking?.nextStop}
-          />
+            <MapView
+              center={mapCenter}
+              routeCoordinates={activeRouteCoords}
+              namedStops={namedStops}
+              routeLabel={
+                activeRoute
+                  ? activeTracking?.direction === "Coming"
+                    ? `${activeRoute.to} → ${activeRoute.from}`
+                    : `${activeRoute.from} → ${activeRoute.to}`
+                  : undefined
+              }
+              showBus={!!activeTracking}
+              busPosition={
+                activeTracking
+                  ? [activeTracking.latitude, activeTracking.longitude]
+                  : undefined
+              }
+              busName={`Bus ${activeTracking?.busNo || ''}`}
+              speed={activeTracking?.speed}
+              eta={activeTracking?.eta}
+              nextStop={activeTracking?.nextStop}
+              direction={activeTracking?.direction}
+              isStopped={activeTracking?.isStopped}
+              currentStop={activeTracking?.currentStop}
+              upcomingStops={activeTracking?.upcomingStops}
+            />
         </div>
       </div>
     </section>

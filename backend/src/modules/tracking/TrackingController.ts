@@ -3,6 +3,7 @@ import TrackingModel from "./TrackingModel.js";
 import RouteModel from "../routes/RouteModel.js";
 import BusModel from "../buses/BusModel.js";
 import { calculateSpeed } from "../../utils/haversine.js";
+import { enrichTrackingData } from "../../utils/trackingLogic.js";
 
 export class TrackingController {
   // ── POST /api/track ───────────────────────────────────────────────────────
@@ -50,6 +51,20 @@ export class TrackingController {
           prevRecord.speed || 0
         );
       }
+      
+      // Fetch the route to get stops for ETA calculation
+      const route = await RouteModel.findById(routeId || prevRecord?.routeId);
+      const stops = route ? route.stops : [];
+      const currentDirection = direction || prevRecord?.direction || "Going";
+
+      // Enrich tracking data with direction, stops, ETA and geofencing
+      const enrichment = enrichTrackingData(
+        Number(latitude),
+        Number(longitude),
+        calculatedSpeed,
+        currentDirection,
+        stops as any
+      );
 
       // Create tracking record
       // Update existing tracking or create if not exists
@@ -62,15 +77,20 @@ export class TrackingController {
         busNo: busNo || "BUS-000",
         routeId: routeId || busId,
         routeName: routeName || "Default Route",
-        direction: direction || "Going",
+        direction: currentDirection,
         latitude: Number(latitude),
         longitude: Number(longitude),
         accuracy: Number(accuracy) || 0,
-        speed: calculatedSpeed,
+        speed: enrichment.isStopped ? 0 : calculatedSpeed,
         timestamp: currentTimestamp,
         bus: busId,
         route: routeId,
         status: "Live",
+        eta: enrichment.upcomingStops[0]?.etaString || "N/A",
+        nextStop: enrichment.nextStop || "Terminal",
+        currentStop: enrichment.currentStop,
+        isStopped: enrichment.isStopped,
+        upcomingStops: enrichment.upcomingStops
       },
       {
         new: true,
@@ -253,7 +273,22 @@ export class TrackingController {
         { $replaceRoot: { newRoot: "$doc" } },
       ]);
 
-      res.status(200).json({ success: true, count: trackings.length, tracking: trackings });
+      await TrackingModel.populate(trackings, { path: "bus" });
+      await TrackingModel.populate(trackings, { path: "route" });
+
+      const exactTrackings = trackings.map(t => {
+        const bus = t.bus as any;
+        if (bus && bus.location && bus.location.lat && bus.location.lng) {
+          return {
+            ...t,
+            latitude: bus.location.lat,
+            longitude: bus.location.lng
+          };
+        }
+        return t;
+      });
+
+      res.status(200).json({ success: true, count: exactTrackings.length, tracking: exactTrackings });
     } catch (error) {
       next(error);
     }
