@@ -7,6 +7,7 @@ export interface StopCoordinate {
   lng: number;
 }
 
+
 export interface UpcomingStopPrediction {
   stopId: string;
   name: string;
@@ -68,15 +69,17 @@ export function enrichTrackingData(
   // it means the bus is located forward along the route segment.
   if (closestStopIdx >= 0 && closestStopIdx < activeStops.length - 1 && minDistance > GEOFENCE_RADIUS_KM) {
     const C = activeStops[closestStopIdx];
-    const nextStop = activeStops[closestStopIdx + 1];
+    const nextS = activeStops[closestStopIdx + 1];
     
-    const a = calculateHaversineDistance(C.lat, C.lng, nextStop.lat, nextStop.lng);
-    const b = minDistance; // Distance from C to Bus
-    const c = calculateHaversineDistance(currentLat, currentLng, nextStop.lat, nextStop.lng);
-    
-    // a^2 + b^2 - c^2 > 0 implies an acute angle.
-    if (a * a + b * b - c * c > 0) {
-      activeStartIndex = closestStopIdx + 1; // Bus has departed C and is heading to nextStop
+    if (C && nextS) {
+      const a = calculateHaversineDistance(C.lat, C.lng, nextS.lat, nextS.lng);
+      const b = minDistance; // Distance from C to Bus
+      const c = calculateHaversineDistance(currentLat, currentLng, nextS.lat, nextS.lng);
+      
+      // a^2 + b^2 - c^2 > 0 implies an acute angle.
+      if (a * a + b * b - c * c > 0) {
+        activeStartIndex = closestStopIdx + 1; // Bus has departed C and is heading to nextS
+      }
     }
   }
 
