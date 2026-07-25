@@ -1,0 +1,22 @@
+* [33mb86a37f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m ui functional but lago mising and web app not connected
+* [33m684ac6f[m WIP: Save current progress without algo and mobile app connectd
+*   [33m250256b[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Merge branch 'main' of https://github.com/nischalcode/Smart-Bus-Tracking-System
+[32m|[m[33m\[m  
+[32m|[m [33m|[m *   [33m265f670[m[33m ([m[1;35mrefs/stash[m[33m)[m WIP on pratik: b9e9f72 map points fixed
+[32m|[m [33m|[m [34m|[m[35m\[m  
+[32m|[m [33m|[m [34m|[m * [33ma2775e3[m index on pratik: b9e9f72 map points fixed
+[32m|[m [33m|[m [34m|[m[34m/[m  
+[32m|[m [33m|[m * [33mb9e9f72[m[33m ([m[1;31morigin/pratik[m[33m, [m[1;32mpratik[m[33m)[m map points fixed
+[32m|[m [33m|[m[33m/[m  
+[32m|[m * [33m9991d9f[m map fixed
+[32m|[m * [33m2caea84[m multiple changes to make the buttons and component funcional
+[32m|[m [35m|[m * [33mcf8cda9[m[33m ([m[1;31morigin/Manish[m[33m)[m Update connectivity
+[32m|[m [35m|[m * [33mad21ba3[m Tracking updates
+[32m|[m [35m|[m * [33m3eeb30f[m Chanfges
+[32m|[m [35m|[m[32m/[m  
+[32m|[m[32m/[m[35m|[m   
+* [35m|[m [33mde85865[m Bus name
+* [35m|[m [33m9feb8e7[m Updating the buss trackingg
+[35m|[m[35m/[m  
+* [33m0491092[m Updating backend for the bus tracking
+* [33ma5a430e[m Trying to fix backend for bus locating
