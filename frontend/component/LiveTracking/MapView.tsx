@@ -2,6 +2,7 @@
 
 import L from "leaflet";
 import type { LatLngExpression } from "leaflet";
+import { haversineKm, formatDistance, calculateETA } from "@/utils/haversine";
 import { Home, Minus, Plus } from "lucide-react";
 import {
   MapContainer,
@@ -11,7 +12,7 @@ import {
   TileLayer,
   useMap,
 } from "react-leaflet";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchRoadRoute } from "@/utils/routing";
 import { initLeafletIcons } from "@/utils/leaflet";
 const busIcon = L.divIcon({
@@ -129,8 +130,8 @@ interface MapViewProps {
 
   namedStops?: {
     name: string;
-    lat: number;
-    lng: number;
+    lat?: number;
+    lng?: number;
   }[];
 
   busPosition?: [number, number];
@@ -141,6 +142,7 @@ interface MapViewProps {
   nextStop?: string;
   showBus?: boolean;
   fullScreen?: boolean;
+  stopETAs?: { name: string; distance: number; eta: string }[];
 }
 
 const MapView = ({
@@ -155,12 +157,54 @@ const MapView = ({
   nextStop = "N/A",
   showBus = false,
   fullScreen = false,
+  // stopETAs from backend is accepted for API compatibility but distance/ETA
+  // is now calculated live on the frontend via Haversine in dynamicStopData
+  stopETAs: _stopETAs = [],
   // className = "",
 }: MapViewProps) => {
   
   useEffect(() => {
     initLeafletIcons();
   }, []);
+
+  const dynamicStopData = useMemo(() => {
+    if (!busPosition || !namedStops || namedStops.length === 0) return null;
+
+    // Only use stops that have valid coordinates
+    const validStops = namedStops.filter(
+      (s): s is { name: string; lat: number; lng: number } =>
+        typeof s.lat === "number" && typeof s.lng === "number"
+    );
+    if (validStops.length === 0) return null;
+
+    let closestDist = Infinity;
+    let closestStop = validStops[0].name;
+
+    const stopData = validStops.map(stop => {
+      const distKm = haversineKm(busPosition, [stop.lat, stop.lng]);
+      if (distKm < closestDist && distKm > 0.03) {
+        closestDist = distKm;
+        closestStop = stop.name;
+      }
+      return {
+        name: stop.name,
+        distKm,
+        distanceStr: formatDistance(distKm),
+        etaStr: calculateETA(distKm, speed ?? 0)
+      };
+    });
+
+    // Prefer backend's nextStop if it matches a valid stop, otherwise use closest
+    const activeNextStopName = nextStop && nextStop !== "N/A" ? nextStop : closestStop;
+    const activeNextStop = stopData.find(s => s.name === activeNextStopName) ?? stopData[0];
+
+    return {
+      stops: stopData,
+      nextStopName: activeNextStop.name,
+      nextStopDistance: activeNextStop.distanceStr,
+      nextStopEta: activeNextStop.etaStr
+    };
+  }, [busPosition, namedStops, speed, nextStop]);
 
   const [roadPath, setRoadPath] =
     useState<LatLngExpression[] | null>(null);
@@ -276,28 +320,60 @@ const MapView = ({
           />
         )}
 
-        {namedStops.map((stop, index) => (
-          <Marker
-            key={index}
-            position={[stop.lat, stop.lng]}
-          >
-            <Popup>{stop.name}</Popup>
-          </Marker>
-        ))}
+        {namedStops.map((stop, index) => {
+          // Skip stops without valid GPS coordinates
+          if (typeof stop.lat !== "number" || typeof stop.lng !== "number") return null;
+          const sData = dynamicStopData?.stops.find((s) => s.name === stop.name);
+          return (
+            <Marker key={index} position={[stop.lat, stop.lng]}>
+              <Popup>
+                <div className="space-y-1">
+                  <h3 className="font-bold text-base">{stop.name}</h3>
+                  {sData && (
+                    <div className="text-sm text-gray-600">
+                      <p className="font-medium text-gray-800 mb-1">Bus Distance:</p>
+                      <p>{sData.distanceStr}</p>
+                      <p className="font-medium text-gray-800 mt-2 mb-1">Arrival Time:</p>
+                      <p className={sData.etaStr === "Arrived" ? "text-green-600 font-semibold" : ""}>
+                        {sData.etaStr}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
         {showBus && busPosition && (
-        <Marker
-          key={busKey}
-          position={busPosition}
-          icon={busIcon}
-        >
-          <Popup>
-            <div>
-              <h3 className="font-bold">{busName}</h3>
-              <p>{routeLabel}</p>
-              <p>{eta}</p>
-            </div>
-          </Popup>
-        </Marker>
+          <Marker
+            position={busPosition}
+            icon={busIcon}
+          >
+            <Popup minWidth={180}>
+              <div className="space-y-1 text-sm">
+                <h3 className="font-bold text-base">Bus: {busName}</h3>
+                <p className="text-gray-500">{routeLabel}</p>
+                <div className="mt-2 space-y-1">
+                  {dynamicStopData && (
+                    <>
+                      <p>
+                        <span className="font-semibold">Distance: </span>
+                        {dynamicStopData.nextStopDistance} ({dynamicStopData.nextStopEta})
+                      </p>
+                      <p>
+                        <span className="font-semibold">Next Stop: </span>
+                        {dynamicStopData.nextStopName}
+                      </p>
+                    </>
+                  )}
+                  <p>
+                    <span className="font-semibold">Speed: </span>
+                    {!speed || speed === 0 ? "Stopped" : `${speed} km/h`}
+                  </p>
+                </div>
+              </div>
+            </Popup>
+          </Marker>
         )}
           
         
@@ -356,7 +432,7 @@ const MapView = ({
       {showBus && (
         <div className="absolute left-5 top-5 z-20 w-64 rounded-xl bg-card text-card-foreground p-4 shadow-xl border">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-bold text-foreground">{busName}</h2>
+            <h2 className="font-bold text-foreground">Bus: {busName}</h2>
 
             <span className="flex items-center gap-1 text-xs font-semibold text-primary">
               <span className="h-2 w-2 animate-pulse rounded-full bg-primary"></span>
@@ -364,24 +440,29 @@ const MapView = ({
             </span>
           </div>
 
-          <p className="mb-2 text-sm text-muted-foreground">
-            {routeLabel}
-          </p>
-
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <div className="flex justify-between">
-              <span>Next Stop</span>
-              <span className="text-foreground">{nextStop}</span>
+          <div className="space-y-4 text-sm text-muted-foreground">
+            <div>
+              <p className="font-semibold text-foreground">Route:</p>
+              <p>{routeLabel}</p>
             </div>
 
-            <div className="flex justify-between">
-              <span>Status</span>
-              <span className="text-foreground">{eta}</span>
-            </div>
+            {dynamicStopData && (
+              <>
+                <div>
+                  <p className="font-semibold text-foreground">Distance:</p>
+                  <p>{dynamicStopData.nextStopDistance} ({dynamicStopData.nextStopEta})</p>
+                </div>
 
-            <div className="flex justify-between">
-              <span>Speed</span>
-              <span className="text-foreground">{speed} km/h</span>
+                <div>
+                  <p className="font-semibold text-foreground">Next Stop:</p>
+                  <p>{dynamicStopData.nextStopName}</p>
+                </div>
+              </>
+            )}
+
+            <div>
+              <p className="font-semibold text-foreground">Speed:</p>
+              <p>{!speed || speed === 0 ? "Stopped" : `${speed} km/h`}</p>
             </div>
           </div>
         </div>

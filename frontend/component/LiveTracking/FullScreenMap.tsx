@@ -197,6 +197,8 @@ const FullScreenMap = ({ onClose, initialRouteIndex = 0 }: FullScreenMapProps) =
           speed={activeTracking?.speed}
           eta={activeTracking?.eta}
           nextStop={activeTracking?.nextStop}
+          namedStops={activeRoute?.stops}
+          stopETAs={activeTracking?.stopETAs}
           fullScreen
         />
       </div>

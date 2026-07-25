@@ -182,6 +182,8 @@ export default function AdminDashboard() {
             speed={activeTracking?.speed}
             eta={activeTracking?.eta}
             nextStop={activeTracking?.nextStop}
+            namedStops={activeRoute?.stops}
+            stopETAs={activeTracking?.stopETAs}
           />
         </div>
 

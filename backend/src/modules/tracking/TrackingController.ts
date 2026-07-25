@@ -2,7 +2,8 @@ import { Request, Response, NextFunction } from "express";
 import TrackingModel from "./TrackingModel.js";
 import RouteModel from "../routes/RouteModel.js";
 import BusModel from "../buses/BusModel.js";
-import { calculateSpeed } from "../../utils/haversine.js";
+import { calculateSpeed, calculateHaversineDistance } from "../../utils/haversine.js";
+import StopModel from "../stops/StopModel.js";
 
 export class TrackingController {
   // ── POST /api/track ───────────────────────────────────────────────────────
@@ -51,6 +52,58 @@ export class TrackingController {
         );
       }
 
+      let nextStop = prevRecord?.nextStop || "N/A";
+      let distanceToNextStop = 0;
+      let eta = "N/A";
+      let stopETAs: any[] = [];
+      let isAtCurrentStop = false;
+
+      if (routeId) {
+        const routeStopsDoc = await StopModel.findOne({ routeId });
+        if (routeStopsDoc && routeStopsDoc.stops && routeStopsDoc.stops.length > 0) {
+          const stops = routeStopsDoc.stops;
+          
+          let targetIdx = 0;
+          if (prevRecord && prevRecord.nextStop) {
+            const idx = stops.findIndex(s => s.name === prevRecord.nextStop);
+            if (idx !== -1) targetIdx = idx;
+          }
+
+          let dist = calculateHaversineDistance(Number(latitude), Number(longitude), stops[targetIdx].lat, stops[targetIdx].lng);
+          
+          // 30m geofence = 0.03 km
+          if (dist <= 0.03) {
+             nextStop = stops[targetIdx].name; // Current Stop
+             distanceToNextStop = dist;
+             eta = "Arrived";
+          } else {
+             // If we left the geofence and were previously arrived, move to next stop
+             if (prevRecord && prevRecord.eta === "Arrived" && targetIdx + 1 < stops.length) {
+                targetIdx++;
+                dist = calculateHaversineDistance(Number(latitude), Number(longitude), stops[targetIdx].lat, stops[targetIdx].lng);
+             }
+
+             nextStop = stops[targetIdx].name;
+             distanceToNextStop = dist;
+             const speedToUse = calculatedSpeed > 0 ? calculatedSpeed : 20; // Default 20km/h if stopped
+             const etaMins = (dist / speedToUse) * 60;
+             eta = `${Math.ceil(etaMins)} min`;
+          }
+
+          // Calculate ETAs for subsequent stops to cache on frontend
+          for (let i = targetIdx; i < stops.length; i++) {
+             const sDist = calculateHaversineDistance(Number(latitude), Number(longitude), stops[i].lat, stops[i].lng);
+             const speedToUse = calculatedSpeed > 0 ? calculatedSpeed : 20;
+             const sEtaMins = (sDist / speedToUse) * 60;
+             stopETAs.push({ 
+               name: stops[i].name, 
+               distance: sDist, 
+               eta: i === targetIdx && dist <= 0.03 ? "Arrived" : `${Math.ceil(sEtaMins)} min`
+             });
+          }
+        }
+      }
+
       // Create tracking record
       // Update existing tracking or create if not exists
     const trackingRecord = await TrackingModel.findOneAndUpdate(
@@ -71,6 +124,10 @@ export class TrackingController {
         bus: busId,
         route: routeId,
         status: "Live",
+        nextStop,
+        distanceToNextStop,
+        eta,
+        stopETAs,
       },
       {
         new: true,
@@ -136,27 +193,46 @@ export class TrackingController {
       const driverId = assignedDriver && typeof (assignedDriver as any)._id === "string" ? (assignedDriver as any)._id : "UNKNOWN";
       const driverName = assignedDriver && typeof (assignedDriver as any).name === "string" ? (assignedDriver as any).name : "Unknown Driver";
  
-      const trackingRecord = await TrackingModel.findOneAndUpdate(
-        { bus: busDoc._id },
-        {
-          driverId,
-          driverName,
-          busId: busDoc._id,
-          busNo: busDoc.busNumber,
-          routeId: routeDoc._id,
-          routeName: `${routeDoc.from} - ${routeDoc.to}`,
-          direction: "Outbound",
-          latitude: Number(defaultLat),
-          longitude: Number(defaultLng),
-          accuracy: 0,
-          speed: 0,
-          timestamp: new Date(),
-          bus: busDoc._id,
-          route: routeDoc._id,
-          status: "Live",
-        },
-        { new: true, upsert: true }
-      );
+      // Debug GPS updates
+console.log("===== Incoming Telemetry =====");
+console.log({
+  busId,
+  busNo,
+  routeId,
+  latitude,
+  longitude,
+  timestamp: currentTimestamp,
+});
+
+// Update existing tracking or create if not exists
+const trackingRecord = await TrackingModel.findOneAndUpdate(
+  { bus: busId },
+  {
+    driverId: driverId || "UNKNOWN",
+    driverName: driverName || "Unknown Driver",
+    busId,
+    busNo: busNo || "BUS-000",
+    routeId: routeId || busId,
+    routeName: routeName || "Default Route",
+    direction: direction || "Going",
+    latitude: Number(latitude),
+    longitude: Number(longitude),
+    accuracy: Number(accuracy) || 0,
+    speed: calculatedSpeed,
+    timestamp: currentTimestamp,
+    bus: busId,
+    route: routeId,
+    status: "Live",
+    nextStop,
+    distanceToNextStop,
+    eta,
+    stopETAs,
+  },
+  {
+    new: true,
+    upsert: true,
+  }
+);
 
       if (!routeDoc.assignedBuses?.some((id) => id.toString() === busDoc._id.toString())) {
         routeDoc.assignedBuses = [...(routeDoc.assignedBuses || []), busDoc._id as any];
@@ -186,8 +262,7 @@ export class TrackingController {
         ...(route.assignedBus ? [typeof route.assignedBus === "string" ? route.assignedBus : (route.assignedBus as any)._id.toString()] : []),
       ].filter(Boolean);
 
-      // Find latest tracking entry for any of the assigned buses or matching routeId
-      const latestTracking = await TrackingModel.findOne({
+      const trackings = await TrackingModel.find({
         $or: [
           { routeId: route._id },
           { route: route._id },
@@ -197,12 +272,15 @@ export class TrackingController {
       } as any)
         .sort({ createdAt: -1 })
         .populate("bus")
-        .populate("route");
+        .populate("route")
+        .limit(10); // Fetch a few to find the latest active one
 
-      if (!latestTracking) {
+      const activeTracking = trackings.find(t => t.bus && (t.bus as any).status !== "Inactive");
+
+      if (!activeTracking) {
         res.status(404).json({
           success: false,
-          message: "No live tracking data available for buses on this route.",
+          message: "No active live tracking data available for buses on this route.",
           route,
         });
         return;
@@ -211,7 +289,7 @@ export class TrackingController {
       res.status(200).json({
         success: true,
         route,
-        tracking: latestTracking,
+        tracking: activeTracking,
       });
     } catch (error) {
       next(error);
@@ -242,7 +320,7 @@ export class TrackingController {
   // ── GET /api/tracking ─────────────────────────────────────────────────────
   async getAllLiveTrackings(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const trackings = await TrackingModel.aggregate([
+      const aggregateTrackings = await TrackingModel.aggregate([
         { $sort: { createdAt: -1 } },
         {
           $group: {
@@ -253,7 +331,10 @@ export class TrackingController {
         { $replaceRoot: { newRoot: "$doc" } },
       ]);
 
-      res.status(200).json({ success: true, count: trackings.length, tracking: trackings });
+      const populatedTrackings = await TrackingModel.populate(aggregateTrackings, { path: "bus route" });
+      const activeTrackings = populatedTrackings.filter(t => t.bus && (t.bus as any).status !== "Inactive");
+
+      res.status(200).json({ success: true, count: activeTrackings.length, tracking: activeTrackings });
     } catch (error) {
       next(error);
     }

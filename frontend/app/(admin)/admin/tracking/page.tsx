@@ -219,6 +219,8 @@ export default function TrackingPage() {
               speed={selected?.speed}
               eta={selected?.eta}
               nextStop={selected?.nextStop}
+              namedStops={selectedRoute?.stops}
+              stopETAs={selected?.stopETAs}
             />
           </div>
           {tracking.length === 0 && (

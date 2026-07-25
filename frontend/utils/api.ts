@@ -172,10 +172,12 @@ export interface TrackingData {
   longitude: number;
   speed: number;
   nextStop?: string;
+  distanceToNextStop?: number;
   eta?: string;
   status: string;
   currentIndex: number;
   driverName?: string;
+  stopETAs?: { name: string; distance: number; eta: string }[];
 }
 
 export interface TrackingResponse {

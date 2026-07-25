@@ -6,26 +6,7 @@ import type { RouteData } from "@/utils/api";
 import RouteMiniMap from "./RouteMiniMap";
 import StatusBadge from "@/component/ui/StatusBadge";
 
-function haversineKm([lat1, lng1]: [number, number], [lat2, lng2]: [number, number]) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
-}
-
-function routeDistanceKm(coords: [number, number][]) {
-  if (!coords || coords.length < 2) return 0;
-  let total = 0;
-  for (let i = 1; i < coords.length; i++) {
-    total += haversineKm(coords[i - 1], coords[i]);
-  }
-  return total;
-}
+import { haversineKm, routeDistanceKm } from "@/utils/haversine";
 
 function statusTone(status: string) {
   const s = status?.toLowerCase() || "";
