@@ -4,6 +4,7 @@ import RouteModel from "../routes/RouteModel.js";
 import BusModel from "../buses/BusModel.js";
 import { calculateSpeed } from "../../utils/haversine.js";
 import { enrichTrackingData } from "../../utils/trackingLogic.js";
+import StopModel from "../stops/StopModel.js";
 
 export class TrackingController {
   // ── POST /api/track ───────────────────────────────────────────────────────
@@ -52,9 +53,20 @@ export class TrackingController {
         );
       }
       
+      const getObjId = (obj: any) => (obj && typeof obj === 'object' && obj._id ? obj._id : obj);
+      const safeRouteId = getObjId(routeId) || getObjId(prevRecord?.routeId);
+      
       // Fetch the route to get stops for ETA calculation
-      const route = await RouteModel.findById(routeId || prevRecord?.routeId);
-      const stops = route ? route.stops : [];
+      const route = await RouteModel.findById(safeRouteId);
+      let stops = route ? route.stops : [];
+      
+      if (route) {
+        const stopDoc = await StopModel.findOne({ routeId: route._id });
+        if (stopDoc && stopDoc.stops && stopDoc.stops.length > 0) {
+          stops = stopDoc.stops;
+        }
+      }
+      
       const currentDirection = direction || prevRecord?.direction || "Going";
 
       // Enrich tracking data with direction, stops, ETA and geofencing

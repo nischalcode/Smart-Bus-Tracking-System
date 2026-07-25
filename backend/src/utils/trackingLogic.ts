@@ -39,46 +39,76 @@ export function enrichTrackingData(
   allStops: StopCoordinate[]
 ): TrackingEnrichmentResult {
   // 1. Direction-Aware Filtering
-  // If direction is "Going", keep as is. If "Coming", reverse the stops.
   let activeStops = [...allStops];
   if (direction === "Coming") {
     activeStops.reverse();
   }
 
   // 2. Determine distances and filter passed stops
-  // We assume a stop is "passed" if it is far behind us. However, a simpler geometric way
-  // for buses on fixed routes is to find the closest stop, and assume all stops before it
-  // in the activeStops array have been passed.
-  
+  const GEOFENCE_RADIUS_KM = 0.03;
   let closestStopIdx = -1;
   let minDistance = Infinity;
+
   const stopDistances = activeStops.map((stop, idx) => {
     const dist = calculateHaversineDistance(currentLat, currentLng, stop.lat, stop.lng);
-    if (dist < minDistance) {
-      minDistance = dist;
-      closestStopIdx = idx;
-    }
     return { stop, dist, idx };
   });
 
-  // Filter out stops that are strictly before the closest stop in the logical sequence
-  let upcomingStopsData = stopDistances.filter(item => item.idx >= closestStopIdx);
+  stopDistances.forEach(item => {
+    if (item.dist < minDistance) {
+      minDistance = item.dist;
+      closestStopIdx = item.idx;
+    }
+  });
+
+  let activeStartIndex = closestStopIdx;
+
+  // Law of Cosines: Determine if the bus is AHEAD of the closest stop (i.e., has passed it)
+  // If the angle between (ClosestStop -> NextStop) and (ClosestStop -> Bus) is acute, 
+  // it means the bus is located forward along the route segment.
+  if (closestStopIdx >= 0 && closestStopIdx < activeStops.length - 1 && minDistance > GEOFENCE_RADIUS_KM) {
+    const C = activeStops[closestStopIdx];
+    const nextStop = activeStops[closestStopIdx + 1];
+    
+    const a = calculateHaversineDistance(C.lat, C.lng, nextStop.lat, nextStop.lng);
+    const b = minDistance; // Distance from C to Bus
+    const c = calculateHaversineDistance(currentLat, currentLng, nextStop.lat, nextStop.lng);
+    
+    // a^2 + b^2 - c^2 > 0 implies an acute angle.
+    if (a * a + b * b - c * c > 0) {
+      activeStartIndex = closestStopIdx + 1; // Bus has departed C and is heading to nextStop
+    }
+  }
+
+  // Filter out stops that are strictly before the logical active start index
+  let upcomingStopsData = stopDistances.filter(item => item.idx >= activeStartIndex);
 
   // 3. Geofencing (30 meters = 0.03 km)
-  const GEOFENCE_RADIUS_KM = 0.03;
   let currentStop: string | null = null;
   let nextStop: string | null = null;
   let isStopped = false;
 
   if (upcomingStopsData.length > 0) {
     const closest = upcomingStopsData[0];
+    if (!closest) {
+  return {
+    upcomingStops: [],
+    currentStop: null,
+    nextStop: null,
+    isStopped: false,
+  };
+}
     if (closest.dist <= GEOFENCE_RADIUS_KM) {
       currentStop = closest.stop.name;
       isStopped = true;
       // If we are at the stop, the next stop is the one after it (if it exists)
       if (upcomingStopsData.length > 1) {
-        nextStop = upcomingStopsData[1].stop.name;
-      }
+  const next = upcomingStopsData[1];
+
+  if (next) {
+    nextStop = next.stop.name;
+  }
+}
     } else {
       nextStop = closest.stop.name;
     }
