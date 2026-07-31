@@ -100,6 +100,7 @@ const LiveTracking = () => {
               speed={activeTracking?.speed}
               eta={activeTracking?.eta}
               nextStop={activeTracking?.nextStop}
+              direction={activeTracking?.direction}
               stopETAs={activeTracking?.stopETAs}
             />
           </div>

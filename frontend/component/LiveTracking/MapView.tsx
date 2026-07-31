@@ -15,18 +15,40 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchRoadRoute } from "@/utils/routing";
 import { initLeafletIcons } from "@/utils/leaflet";
-const busIcon = L.divIcon({
-  html: `
-    <div style="
-      font-size:30px;
-    ">
-      🚌
-    </div>
-  `,
-  className: "",
-  iconSize: [30, 30],
-  iconAnchor: [15, 15],
-});
+
+const busIcon = (direction: string) => {
+  const isComing = direction === "Coming";
+  return L.divIcon({
+    html: `
+      <div style="
+        font-size:30px;
+        transform: scaleX(${isComing ? -1 : 1});
+        display:inline-block;
+      ">
+        🚌
+      </div>
+    `,
+    className: "",
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+  });
+};
+
+// Helper to format route label according to travel direction (Going vs Coming)
+function formatDirectionalRouteLabel(label: string, dir?: string): string {
+  if (!label || label === "Route") return "Route";
+  const separator = label.includes(" → ") ? " → " : label.includes(" - ") ? " - " : null;
+  if (!separator) return label;
+
+  const parts = label.split(separator);
+  if (parts.length !== 2) return label;
+
+  if (dir === "Coming") {
+    return `${parts[1].trim()} → ${parts[0].trim()}`;
+  }
+  return `${parts[0].trim()} → ${parts[1].trim()}`;
+}
+
 // ==========================
 // Fit Route
 // ==========================
@@ -44,7 +66,6 @@ const FitBounds = ({ positions }: { positions: LatLngExpression[] }) => {
   return null;
 };
 
-
 // ==========================
 // Center On Bus
 // ==========================
@@ -58,28 +79,6 @@ const CenterOnBus = ({
   useEffect(() => {
     map.panTo(center);
   }, [center, map]);
-
-  return null;
-};
-
-// ==========================
-// Follow Device Location
-// ==========================
-const FollowDevice = ({
-  location,
-}: {
-  location: [number, number] | null;
-}) => {
-  const map = useMap();
-
-  useEffect(() => {
-    if (location) {
-      map.flyTo(location, map.getZoom(), {
-        animate: true,
-        duration: 1,
-      });
-    }
-  }, [location, map]);
 
   return null;
 };
@@ -124,6 +123,9 @@ const ZoomControls = ({
   );
 };
 
+// ==========================
+// MapView Props
+// ==========================
 interface MapViewProps {
   center?: [number, number];
   routeCoordinates?: [number, number][];
@@ -137,6 +139,7 @@ interface MapViewProps {
   busPosition?: [number, number];
   busName?: string;
   routeLabel?: string;
+  direction?: string; // "Going" | "Coming"
   eta?: string;
   speed?: number;
   nextStop?: string;
@@ -152,59 +155,173 @@ const MapView = ({
   busPosition,
   busName = "Bus",
   routeLabel = "Route",
+  direction = "Going",
   eta = "N/A",
   speed = 0,
   nextStop = "N/A",
   showBus = false,
   fullScreen = false,
-  // stopETAs from backend is accepted for API compatibility but distance/ETA
-  // is now calculated live on the frontend via Haversine in dynamicStopData
   stopETAs: _stopETAs = [],
-  // className = "",
 }: MapViewProps) => {
-  
+
   useEffect(() => {
     initLeafletIcons();
   }, []);
 
+  const formattedRouteLabel = useMemo(() => {
+    return formatDirectionalRouteLabel(routeLabel, direction);
+  }, [routeLabel, direction]);
+
+  // Persistent ref to track progression through stops (never regresses)
+  const progressionRef = useRef<{ nextIdx: number; wasArrived: boolean }>({
+    nextIdx: 0,
+    
+    wasArrived: false,  
+  });
+
+  // ==========================
+  // Dynamic Geofencing & Direction-Aware Stop Progression (updates live with bus movement)
+  // ==========================
   const dynamicStopData = useMemo(() => {
     if (!busPosition || !namedStops || namedStops.length === 0) return null;
 
-    // Only use stops that have valid coordinates
+    // Filter stops that have non-empty name and valid GPS coordinates
     const validStops = namedStops.filter(
       (s): s is { name: string; lat: number; lng: number } =>
-        typeof s.lat === "number" && typeof s.lng === "number"
+        Boolean(s) && Boolean(s.name) && typeof s.lat === "number" && typeof s.lng === "number"
     );
     if (validStops.length === 0) return null;
 
-    let closestDist = Infinity;
-    let closestStop = validStops[0].name;
+    // Order stops according to directional travel sequence
+    const orderedStops = direction === "Coming" ? [...validStops].reverse() : [...validStops];
 
-    const stopData = validStops.map(stop => {
-      const distKm = haversineKm(busPosition, [stop.lat, stop.lng]);
-      if (distKm < closestDist && distKm > 0.03) {
-        closestDist = distKm;
-        closestStop = stop.name;
+    // Compute distance to each stop
+    const stopDistances = orderedStops.map((stop) => ({
+      name: stop.name,
+      lat: stop.lat,
+      lng: stop.lng,
+      distKm: haversineKm(busPosition, [stop.lat, stop.lng]),
+    }));
+    
+
+    // Reset progression when stops or direction changes
+    const progression = progressionRef.current;
+    if (progression.nextIdx >= orderedStops.length) {
+      progression.nextIdx = orderedStops.length - 1;
+    }
+
+    // Find the best nextIdx by scanning forward through stops.
+    // Start from the persisted nextIdx, but if a stop ahead is significantly
+    // closer than the current target, advance to it. This handles the case
+    // where the bus is already past progression.nextIdx (e.g. telemetry started late).
+    let nextStopIdx = progression.nextIdx;
+    let bestDist = stopDistances[nextStopIdx]?.distKm ?? Infinity;
+
+    for (let i = nextStopIdx + 1; i < orderedStops.length; i++) {
+      const d = stopDistances[i].distKm;
+      // If this stop is closer and the bus has clearly passed the previous one
+      if (d < bestDist * 0.8 && d < 1) {
+        nextStopIdx = i;
+        bestDist = d;
+        progression.wasArrived = false;
       }
-      return {
-        name: stop.name,
-        distKm,
-        distanceStr: formatDistance(distKm),
-        etaStr: calculateETA(distKm, speed ?? 0)
-      };
+    }
+
+    // Also check if nextStopIdx itself is too far — look for the first stop
+    // within 2km ahead, or the next one that is closer than the current.
+    // This prevents sticking on a stop the bus has already passed.
+    const distToTarget = stopDistances[nextStopIdx]?.distKm ?? Infinity;
+    for (let i = nextStopIdx + 1; i < orderedStops.length; i++) {
+      if (stopDistances[i].distKm < distToTarget * 0.5) {
+        nextStopIdx = i;
+        break;
+      }
+    }
+
+    // Clamp and persist
+    if (nextStopIdx !== progression.nextIdx) {
+      progression.nextIdx = nextStopIdx;
+    }
+
+    let isArrived = false;
+    let currentStopName = "";
+    let currentStopIdx = -1;
+
+    const currentTarget = orderedStops[nextStopIdx];
+    const currentDist = currentTarget
+      ? haversineKm(busPosition, [currentTarget.lat, currentTarget.lng])
+      : Infinity;
+
+    // 30m Geofencing Check (0.03 km)
+    if (currentDist <= 0.03) {
+      isArrived = true;
+      currentStopIdx = nextStopIdx;
+      currentStopName = orderedStops[nextStopIdx].name;
+      progression.wasArrived = true;
+    } else {
+      isArrived = false;
+      // If we were arrived and have left the geofence, advance to next stop
+      if (progression.wasArrived && nextStopIdx + 1 < orderedStops.length) {
+        nextStopIdx++;
+        progression.nextIdx = nextStopIdx;
+        progression.wasArrived = false;
+      }
+    }
+
+    const targetNextStop = orderedStops[nextStopIdx];
+    const targetNextDist = targetNextStop
+      ? haversineKm(busPosition, [targetNextStop.lat, targetNextStop.lng])
+      : 0;
+    const nextStopDistanceStr = formatDistance(targetNextDist);
+    const nextStopEtaStr = calculateETA(targetNextDist, speed ?? 0);
+
+    // Build map of per-stop status for popups (passed / arrived / upcoming)
+    const stopStatusMap = new Map<
+      string,
+      {
+        statusType: "passed" | "arrived" | "upcoming";
+        distanceStr: string;
+        etaStr: string;
+      }
+    >();
+
+    orderedStops.forEach((stop, idx) => {
+      const distKm = stopDistances[idx].distKm;
+      const distStr = formatDistance(distKm);
+      const etaStr = calculateETA(distKm, speed ?? 0);
+
+      if (isArrived && idx === currentStopIdx) {
+        stopStatusMap.set(stop.name, {
+          statusType: "arrived",
+          distanceStr: "0 m",
+          etaStr: "Arrived",
+        });
+      } else if (idx < nextStopIdx) {
+        // Passed stop behind the bus in directional sequence
+        stopStatusMap.set(stop.name, {
+          statusType: "passed",
+          distanceStr: distStr,
+          etaStr: "No upcoming bus at this stop soon",
+        });
+      } else {
+        // Upcoming stop ahead of the bus
+        stopStatusMap.set(stop.name, {
+          statusType: "upcoming",
+          distanceStr: distStr,
+          etaStr: etaStr,
+        });
+      }
     });
 
-    // Prefer backend's nextStop if it matches a valid stop, otherwise use closest
-    const activeNextStopName = nextStop && nextStop !== "N/A" ? nextStop : closestStop;
-    const activeNextStop = stopData.find(s => s.name === activeNextStopName) ?? stopData[0];
-
     return {
-      stops: stopData,
-      nextStopName: activeNextStop.name,
-      nextStopDistance: activeNextStop.distanceStr,
-      nextStopEta: activeNextStop.etaStr
+      isArrived,
+      currentStopName,
+      nextStopName: targetNextStop?.name || "Next Stop",
+      nextStopDistance: nextStopDistanceStr,
+      nextStopEta: nextStopEtaStr,
+      stopStatusMap,
     };
-  }, [busPosition, namedStops, speed, nextStop]);
+  }, [busPosition, namedStops, speed, direction]);
 
   const [roadPath, setRoadPath] =
     useState<LatLngExpression[] | null>(null);
@@ -248,7 +365,7 @@ const MapView = ({
   }, []);
 
   // ==========================
-  // Road Route
+  // Road Route via OSRM
   // ==========================
   useEffect(() => {
     if (routeCoordinates.length < 2) {
@@ -300,8 +417,6 @@ const MapView = ({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {/* <FollowDevice location={deviceLocation} /> */}
-
         {showBus && busPosition ? (
           <CenterOnBus center={busPosition} />
         ) : routePolyline.length >= 2 ? (
@@ -320,52 +435,87 @@ const MapView = ({
           />
         )}
 
+        {/* Stop Markers — direction-aware status & popups */}
         {namedStops.map((stop, index) => {
-          // Skip stops without valid GPS coordinates
           if (typeof stop.lat !== "number" || typeof stop.lng !== "number") return null;
-          const sData = dynamicStopData?.stops.find((s) => s.name === stop.name);
+          const statusInfo = dynamicStopData?.stopStatusMap.get(stop.name);
+
           return (
             <Marker key={index} position={[stop.lat, stop.lng]}>
               <Popup>
-                <div className="space-y-1">
-                  <h3 className="font-bold text-base">{stop.name}</h3>
-                  {sData && (
-                    <div className="text-sm text-gray-600">
-                      <p className="font-medium text-gray-800 mb-1">Bus Distance:</p>
-                      <p>{sData.distanceStr}</p>
-                      <p className="font-medium text-gray-800 mt-2 mb-1">Arrival Time:</p>
-                      <p className={sData.etaStr === "Arrived" ? "text-green-600 font-semibold" : ""}>
-                        {sData.etaStr}
-                      </p>
+                <div className="space-y-1 min-w-[160px]">
+                  <h3 className="font-bold text-base text-gray-900">{stop.name}</h3>
+                  {statusInfo ? (
+                    <div className="text-sm">
+                      {statusInfo.statusType === "arrived" ? (
+                        <div className="mt-1">
+                          <span className="inline-block rounded bg-green-100 px-2 py-0.5 font-bold text-green-700 text-xs mb-1">
+                            BUS ARRIVED
+                          </span>
+                          <p className="text-gray-600">Bus Distance: 0 m</p>
+                        </div>
+                      ) : statusInfo.statusType === "passed" ? (
+                        <div className="mt-1 text-gray-500 font-medium">
+                          <p className="text-xs bg-gray-100 p-1.5 rounded text-gray-600">
+                            No upcoming bus at this stop soon
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="text-gray-600 mt-1">
+                          <p className="font-medium text-gray-800 mb-0.5">Bus Distance:</p>
+                          <p>{statusInfo.distanceStr}</p>
+                          <p className="font-medium text-gray-800 mt-2 mb-0.5">Arrival Time:</p>
+                          <p>{statusInfo.etaStr}</p>
+                        </div>
+                      )}
                     </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">Bus not active on this route</p>
                   )}
                 </div>
               </Popup>
             </Marker>
           );
         })}
+
+        {/* Bus Marker — rich popup on click */}
         {showBus && busPosition && (
           <Marker
+            key={busKey}
             position={busPosition}
-            icon={busIcon}
+            icon={busIcon(direction)}
           >
             <Popup minWidth={180}>
               <div className="space-y-1 text-sm">
                 <h3 className="font-bold text-base">Bus: {busName}</h3>
-                <p className="text-gray-500">{routeLabel}</p>
+                <p className="text-gray-500 font-medium">
+                  {formattedRouteLabel} ({direction || "Going"})
+                </p>
                 <div className="mt-2 space-y-1">
-                  {dynamicStopData && (
+                  {dynamicStopData ? (
                     <>
-                      <p>
-                        <span className="font-semibold">Distance: </span>
-                        {dynamicStopData.nextStopDistance} ({dynamicStopData.nextStopEta})
-                      </p>
-                      <p>
-                        <span className="font-semibold">Next Stop: </span>
-                        {dynamicStopData.nextStopName}
-                      </p>
+                      {dynamicStopData.isArrived ? (
+                        <>
+                          <p>
+                            <span className="font-semibold text-green-600">Current Stop: </span>
+                            {dynamicStopData.currentStopName}
+                          </p>
+                          <p className="text-xs text-green-600 font-semibold">Arrived (0 m)</p>
+                        </>
+                      ) : (
+                        <>
+                          <p>
+                            <span className="font-semibold">Distance: </span>
+                            {dynamicStopData.nextStopDistance} ({dynamicStopData.nextStopEta})
+                          </p>
+                          <p>
+                            <span className="font-semibold">Next Stop: </span>
+                            {dynamicStopData.nextStopName}
+                          </p>
+                        </>
+                      )}
                     </>
-                  )}
+                  ) : null}
                   <p>
                     <span className="font-semibold">Speed: </span>
                     {!speed || speed === 0 ? "Stopped" : `${speed} km/h`}
@@ -375,21 +525,17 @@ const MapView = ({
             </Popup>
           </Marker>
         )}
-          
-        
 
-        {/* Device Location */}
+        {/* Device Location Marker */}
         {deviceLocation && (
           <Marker position={deviceLocation}>
             <Popup>
               <div className="space-y-1">
                 <h3 className="font-semibold">📍 Your Current Location</h3>
-
                 <p>
                   <strong>Latitude:</strong>{" "}
                   {deviceLocation[0].toFixed(6)}
                 </p>
-
                 <p>
                   <strong>Longitude:</strong>{" "}
                   {deviceLocation[1].toFixed(6)}
@@ -399,13 +545,14 @@ const MapView = ({
           </Marker>
         )}
       </MapContainer>
+
+      {/* Device Location Overlay Card */}
       {deviceLocation && (
-        <div className="absolute left-5 bottom-5 z-20 w-72 rounded-xl bg-card text-card-foreground p-4 shadow-xl border">
+        <div className="absolute left-5 bottom-5 z-[1001] w-72 rounded-xl bg-card text-card-foreground p-4 shadow-xl border">
           <div className="flex items-center justify-between">
             <h2 className="font-bold text-lg">
               📍 Current Device Location
             </h2>
-
             <span className="text-success font-semibold text-sm">
               LIVE
             </span>
@@ -429,11 +576,11 @@ const MapView = ({
         </div>
       )}
 
+      {/* Bus Info Card — Top-Left Overlay */}
       {showBus && (
-        <div className="absolute left-5 top-5 z-20 w-64 rounded-xl bg-card text-card-foreground p-4 shadow-xl border">
+        <div className="absolute left-5 top-5 z-[1001] w-64 rounded-xl bg-card text-card-foreground p-4 shadow-xl border">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-bold text-foreground">Bus: {busName}</h2>
-
             <span className="flex items-center gap-1 text-xs font-semibold text-primary">
               <span className="h-2 w-2 animate-pulse rounded-full bg-primary"></span>
               LIVE
@@ -443,20 +590,30 @@ const MapView = ({
           <div className="space-y-4 text-sm text-muted-foreground">
             <div>
               <p className="font-semibold text-foreground">Route:</p>
-              <p>{routeLabel}</p>
+              <p className="font-medium">{formattedRouteLabel} <span className="text-xs font-normal text-muted-foreground">({direction || "Going"})</span></p>
             </div>
 
             {dynamicStopData && (
               <>
-                <div>
-                  <p className="font-semibold text-foreground">Distance:</p>
-                  <p>{dynamicStopData.nextStopDistance} ({dynamicStopData.nextStopEta})</p>
-                </div>
+                {dynamicStopData.isArrived ? (
+                  <div>
+                    <p className="font-semibold text-green-600 dark:text-green-400">Current Stop:</p>
+                    <p className="font-bold text-foreground">{dynamicStopData.currentStopName}</p>
+                    <p className="text-xs text-green-600 font-semibold mt-0.5">Arrived (0 m)</p>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <p className="font-semibold text-foreground">Distance:</p>
+                      <p>{dynamicStopData.nextStopDistance} ({dynamicStopData.nextStopEta})</p>
+                    </div>
 
-                <div>
-                  <p className="font-semibold text-foreground">Next Stop:</p>
-                  <p>{dynamicStopData.nextStopName}</p>
-                </div>
+                    <div>
+                      <p className="font-semibold text-foreground">Next Stop:</p>
+                      <p className="font-medium text-foreground">{dynamicStopData.nextStopName}</p>
+                    </div>
+                  </>
+                )}
               </>
             )}
 

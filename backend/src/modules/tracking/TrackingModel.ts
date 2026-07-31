@@ -18,8 +18,8 @@ const trackingSchema = new Schema(
     bus: { type: Schema.Types.ObjectId, ref: "Bus" },
     route: { type: Schema.Types.ObjectId, ref: "Route" },
     status: { type: String, default: "Live" },
-    
-    // ETA & Geofencing cached calculations
+
+    // ETA & Geofencing cached calculations (computed on each telemetry update)
     nextStop: { type: String },
     distanceToNextStop: { type: Number },
     eta: { type: String },

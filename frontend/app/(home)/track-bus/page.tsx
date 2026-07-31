@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import BusSearchHeader from "@/component/head/BusSearchHeader";
 import dynamic from "next/dynamic";
 const MapView = dynamic(() => import("@/component/LiveTracking/MapView"), { ssr: false });
@@ -9,19 +9,28 @@ import RouteSidebar from "@/component/LiveTracking/RouteSidebar";
 import Stats from "@/component/stats/Stats";
 import TrackLayout from "@/component/track-layout/TrackLayout";
 import { useLiveTracking } from "@/hooks/useLiveTracking";
+import { fetchStopsByRoute, NamedStop } from "@/utils/api";
 
 export default function Page() {
   const { routes, loadingRoutes, trackingByRouteId } = useLiveTracking();
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRouteFilter, setSelectedRouteFilter] = useState("All Routes");
+  const [selectedRouteFilter, setSelectedRouteFilter] = useState("All Buses");
   const [showFullScreen, setShowFullScreen] = useState(false);
+  const [namedStops, setNamedStops] = useState<NamedStop[]>([]);
 
   const activeRoute = routes[selectedIndex];
   const activeRouteCoords = activeRoute?.pathCoordinates || [];
   const activeTracking = activeRoute
     ? trackingByRouteId.get(activeRoute._id)
     : undefined;
+
+  useEffect(() => {
+    if (!activeRoute?._id) return;
+    fetchStopsByRoute(activeRoute._id)
+      .then((data) => { setNamedStops(data?.stops || []); })
+      .catch(console.error);
+  }, [activeRoute?._id]);
 
   const mapCenter: [number, number] | undefined = activeTracking
     ? [activeTracking.latitude, activeTracking.longitude]
@@ -54,7 +63,7 @@ export default function Page() {
 
   const handleRouteFilter = (route: string) => {
     setSelectedRouteFilter(route);
-    if (route !== "All Routes") {
+    if (route !== "All Buses") {
       const idx = routes.findIndex(
         (r) => r.routeNo === route || `${r.from} → ${r.to}` === route
       );
@@ -103,7 +112,8 @@ export default function Page() {
             speed={activeTracking?.speed}
             eta={activeTracking?.eta}
             nextStop={activeTracking?.nextStop}
-            namedStops={activeRoute?.stops}
+            direction={activeTracking?.direction}
+            namedStops={namedStops}
             stopETAs={activeTracking?.stopETAs}
           />
         </div>

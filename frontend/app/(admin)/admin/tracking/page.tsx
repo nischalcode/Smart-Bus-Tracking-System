@@ -13,6 +13,8 @@ import {
   BusData,
   RouteData,
   RoutesResponse,
+  fetchStopsByRoute,
+  NamedStop,
 } from "@/utils/api";
 import DataTable, { Column } from "@/component/ui/DataTable";
 import PageHeader from "@/component/ui/PageHeader";
@@ -128,11 +130,20 @@ export default function TrackingPage() {
     return { avgSpeed, delayed, onTimePercent };
   }, [tracking]);
 
+  const [trackingNamedStops, setTrackingNamedStops] = useState<NamedStop[]>([]);
+
   const selected = tracking.find((t) => t._id === selectedId) ?? tracking[0];
   const selectedRoute = selected
     ? routes.find((r) => r._id === selected.route?._id)
     : undefined;
   const routeCoords = selectedRoute?.pathCoordinates ?? [];
+
+  useEffect(() => {
+    if (!selectedRoute?._id) return;
+    fetchStopsByRoute(selectedRoute._id)
+      .then((data) => { setTrackingNamedStops(data?.stops || []); })
+      .catch(console.error);
+  }, [selectedRoute?._id]);
 
   const columns: Column<TrackingData & Record<string, unknown>>[] = [
     {
@@ -219,7 +230,8 @@ export default function TrackingPage() {
               speed={selected?.speed}
               eta={selected?.eta}
               nextStop={selected?.nextStop}
-              namedStops={selectedRoute?.stops}
+              direction={selected?.direction}
+              namedStops={trackingNamedStops}
               stopETAs={selected?.stopETAs}
             />
           </div>

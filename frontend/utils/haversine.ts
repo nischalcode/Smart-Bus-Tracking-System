@@ -27,18 +27,18 @@ export function formatDistance(distKm: number): string {
 }
 
 export function calculateETA(distanceKm: number, speedKmh: number): string {
-  if (distanceKm <= 0.03) return "Arrived"; // within 30m
+  if (distanceKm <= 0.03) return "Arrived"; // within 30m geofence
   if (!speedKmh || speedKmh <= 0) return "Stopped";
-  
+
   const totalSeconds = (distanceKm / speedKmh) * 3600;
-  
+
   if (totalSeconds < 60) {
     return `${Math.round(totalSeconds)} sec`;
   }
-  
+
   const mins = Math.floor(totalSeconds / 60);
   const secs = Math.round(totalSeconds % 60);
-  
+
   if (secs === 0) {
     return `${mins} min`;
   }

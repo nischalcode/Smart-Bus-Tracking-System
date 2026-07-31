@@ -1,4 +1,3 @@
 export const startTrackingSimulation = (): void => {
-  console.log("GPS Simulator Disabled to prevent location jumping.");
+  console.log("GPS Simulator Disabled — real driver GPS telemetry is used instead.");
 };
-

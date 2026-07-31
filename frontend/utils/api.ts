@@ -1,5 +1,5 @@
- const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9006/api";
-//const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://sbts-backend.onrender.com/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9006/api";
+//  const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://smart-bus-tracking-system-backend.onrender.com/api";
 
 // Named stop — a waypoint with a human label and GPS coordinates
 export interface NamedStop {
@@ -177,6 +177,7 @@ export interface TrackingData {
   status: string;
   currentIndex: number;
   driverName?: string;
+  direction?: string;
   stopETAs?: { name: string; distance: number; eta: string }[];
 }
 

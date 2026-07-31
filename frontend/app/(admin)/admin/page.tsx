@@ -19,7 +19,7 @@ import {
   Bell,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { fetchApi, StatsData, NotificationData, NotificationsResponse } from "@/utils/api";
+import { fetchApi, StatsData, NotificationData, NotificationsResponse, fetchStopsByRoute, NamedStop } from "@/utils/api";
 import LoadingSpinner from "@/component/ui/LoadingSpinner";
 import MapView from "@/component/LiveTracking/MapView";
 import { useLiveTracking } from "@/hooks/useLiveTracking";
@@ -36,6 +36,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const { routes, trackingByRouteId, tracking } = useLiveTracking();
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  const [namedStops, setNamedStops] = useState<NamedStop[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -49,6 +50,19 @@ export default function AdminDashboard() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [token]);
+
+  const activeRoute = routes[selectedIndex];
+  const activeRouteCoords = activeRoute?.pathCoordinates || [];
+  const activeTracking = activeRoute
+    ? trackingByRouteId.get(activeRoute._id)
+    : undefined;
+
+  useEffect(() => {
+    if (!activeRoute?._id) return;
+    fetchStopsByRoute(activeRoute._id)
+      .then((data) => { setNamedStops(data?.stops || []); })
+      .catch(console.error);
+  }, [activeRoute?._id]);
 
   if (loading) {
     return <LoadingSpinner size="lg" />;
@@ -119,12 +133,6 @@ export default function AdminDashboard() {
     day: "numeric",
   });
 
-  const activeRoute = routes[selectedIndex];
-  const activeRouteCoords = activeRoute?.pathCoordinates || [];
-  const activeTracking = activeRoute
-    ? trackingByRouteId.get(activeRoute._id)
-    : undefined;
-
   const mapCenter: [number, number] | undefined = activeTracking
     ? [activeTracking.latitude, activeTracking.longitude]
     : activeRouteCoords.length > 0
@@ -182,7 +190,8 @@ export default function AdminDashboard() {
             speed={activeTracking?.speed}
             eta={activeTracking?.eta}
             nextStop={activeTracking?.nextStop}
-            namedStops={activeRoute?.stops}
+            direction={activeTracking?.direction}
+            namedStops={namedStops}
             stopETAs={activeTracking?.stopETAs}
           />
         </div>
@@ -240,7 +249,7 @@ export default function AdminDashboard() {
                 {activeTracking ? (
                   <div className="grid gap-3 sm:grid-cols-2 text-sm">
                     <div className="space-y-1">
-                      <p className="flex items-center gap-1.5"><Bus className="h-4 w-4 text-primary" /> <span className="text-sidebar-muted">Bus No:</span> <strong className="text-foreground">{activeTracking.bus?.busNumber || "Bus"}</strong></p>
+                      <p className="flex items-center gap-1.5"><Bus className="h-4 w-4 text-primary" /> <span className="text-sidebar-muted">Bus No:</span>  {activeTracking.bus?.busNumber || "Bus"}</p>
                       <p className="flex items-center gap-1.5"><User className="h-4 w-4 text-accent" /> <span className="text-sidebar-muted">Driver:</span> {activeTracking.driverName}</p>
                       <p className="flex items-center gap-1.5"><Gauge className="h-4 w-4 text-info" /> <span className="text-sidebar-muted">Speed:</span> {activeTracking.speed?.toFixed(0) || 0} km/h</p>
                     </div>

@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { X, Search } from "lucide-react";
 import { useLiveTracking } from "@/hooks/useLiveTracking";
-import { RouteData } from "@/utils/api";
+import { RouteData, fetchStopsByRoute, NamedStop } from "@/utils/api";
 
 const MapView = dynamic(() => import("./MapView"), {
   ssr: false,
@@ -20,6 +20,7 @@ const FullScreenMap = ({ onClose, initialRouteIndex = 0 }: FullScreenMapProps) =
   const { routes, trackingByRouteId } = useLiveTracking();
   const [selectedIndex, setSelectedIndex] = useState(initialRouteIndex);
   const [search, setSearch] = useState("");
+  const [namedStops, setNamedStops] = useState<NamedStop[]>([]);
 
   useEffect(() => {
     setSelectedIndex(initialRouteIndex);
@@ -45,6 +46,13 @@ const FullScreenMap = ({ onClose, initialRouteIndex = 0 }: FullScreenMapProps) =
   const activeTracking = activeRoute
     ? trackingByRouteId.get(activeRoute._id)
     : undefined;
+
+  useEffect(() => {
+    if (!activeRoute?._id) return;
+    fetchStopsByRoute(activeRoute._id)
+      .then((data) => { setNamedStops(data?.stops || []); })
+      .catch(console.error);
+  }, [activeRoute?._id]);
 
   const mapCenter: [number, number] | undefined = activeTracking
     ? [activeTracking.latitude, activeTracking.longitude]
@@ -197,7 +205,8 @@ const FullScreenMap = ({ onClose, initialRouteIndex = 0 }: FullScreenMapProps) =
           speed={activeTracking?.speed}
           eta={activeTracking?.eta}
           nextStop={activeTracking?.nextStop}
-          namedStops={activeRoute?.stops}
+          direction={activeTracking?.direction}
+          namedStops={namedStops}
           stopETAs={activeTracking?.stopETAs}
           fullScreen
         />
