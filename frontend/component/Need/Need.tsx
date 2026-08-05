@@ -113,7 +113,7 @@ const WhyChoose = () => {
                 </MapContainer>
 
                 <div className="absolute top-12 left-4 right-4 z-20 rounded-xl bg-white p-4 shadow-md">
-                  <h3 className="text-xl font-bold">12A</h3>
+                  <h3 className="text-xl font-bold text-black">12A</h3>
 
                   <p className="text-xs text-gray-500 border-b pb-3 mb-3">
                     City Center → Airport
@@ -121,7 +121,7 @@ const WhyChoose = () => {
 
                   <p className="text-[10px] text-gray-500">Next Stop</p>
 
-                  <h4 className="text-sm font-bold">Green Street</h4>
+                  <h4 className="text-sm font-bold text-black">Green Street</h4>
 
                   <p className="text-primary text-xs font-semibold">
                     2 min away

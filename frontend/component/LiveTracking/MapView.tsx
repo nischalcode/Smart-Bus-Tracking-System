@@ -96,7 +96,7 @@ const ZoomControls = ({
   const map = useMap();
 
   return (
-    <div className="absolute bottom-6 right-6 z-[1000] flex flex-col gap-2">
+    <div className="absolute bottom-6 right-6 z-1000 flex flex-col gap-2">
       <button
         onClick={() => map.zoomIn()}
         className="rounded-lg bg-card text-card-foreground p-2 shadow hover:bg-muted"
@@ -241,7 +241,7 @@ const MapView = ({
   return (
     <div
       className={`relative overflow-hidden rounded-2xl border shadow ${
-        fullScreen ? "h-full w-full" : "h-full w-full min-h-[400px]"
+        fullScreen ? "h-full w-full" : "h-full w-full min-h-100"
       }`}
       style={{ height: "100%", width: "100%" }}
     >

@@ -71,22 +71,23 @@ export default function Page() {
         routes={routes}
       />
       <div className="flex flex-col gap-4 p-5 lg:flex-row">
-        {loadingRoutes ? (
-          <div className="flex h-[600px] w-full items-center justify-center rounded-2xl bg-white shadow-md lg:w-1/3 animate-pulse">
-            <span className="text-gray-500 font-medium">Loading Routes...</span>
-          </div>
-        ) : (
-          <RouteSidebar
-            routes={sidebarRoutes}
-            title="Available Routes"
-            description="Select a route to display its path and stops on the map."
-            showSearch={true}
-            onSelect={setSelectedIndex}
-            searchQuery={searchQuery}
-          />
-        )}
-
-        <div className="w-full lg:w-2/3 h-[600px]">
+        <div className="w-full lg:flex-1"> 
+          {loadingRoutes ? (
+            <div className="flex h-150 w-full items-center justify-center rounded-2xl bg-white shadow-md lg:w-1/3 animate-pulse">
+              <span className="text-gray-500 font-medium">Loading Routes...</span>
+            </div>
+          ) : (
+            <RouteSidebar
+              routes={sidebarRoutes}
+              title="Available Routes"
+              description="Select a route to display its path and stops on the map."
+              showSearch={true}
+              onSelect={setSelectedIndex}
+              searchQuery={searchQuery}
+            />
+          )}
+        </div>
+        <div className="w-full lg:flex-1 h-[600px]">
           <MapView
             center={mapCenter}
             routeCoordinates={activeRouteCoords}

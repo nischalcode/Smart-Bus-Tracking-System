@@ -48,7 +48,7 @@ const RouteSidebar = ({
   });
 
   return (
-    <div className="flex h-[600px] w-full flex-col rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-md  transition-colors">
+    <div className="flex h-150 w-full flex-col rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-md  transition-colors">
       <h3 className="mb-2 text-xl font-bold dark:text-white">
         {title || t('tracking.title')}
       </h3>

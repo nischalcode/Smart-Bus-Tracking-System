@@ -10,7 +10,7 @@ import { useLanguage } from '@/context/LanguageContext';
 const MapView = dynamic(() => import('./MapView'), {
   ssr: false,
   loading: () => (
-    <div className="h-[600px] w-full rounded-2xl bg-gray-100 animate-pulse lg:w-2/3" />
+    <div className="h-150 w-full rounded-2xl bg-gray-100 animate-pulse lg:w-2/3" />
   ),
 });
 
@@ -64,7 +64,7 @@ const LiveTracking = () => {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="lg:col-span-1">
             {loadingRoutes ? (
-              <div className="flex h-[600px] w-full items-center justify-center rounded-2xl bg-card shadow-md lg:w-1/3 animate-pulse">
+              <div className="flex h-150 w-full items-center justify-center rounded-2xl bg-card shadow-md lg:w-1/3 animate-pulse">
                 <span className="text-gray-500 font-medium">
                   {t('common.loading')}
                 </span>
@@ -80,7 +80,7 @@ const LiveTracking = () => {
             )}
           </div>
 
-          <div className="lg:col-span-2 min-w-0 h-[600px]">
+          <div className="lg:col-span-2 min-w-0 h-150">
             <MapView
               center={mapCenter}
               routeCoordinates={activeRouteCoords}

@@ -204,7 +204,8 @@ export default function TrackingPage() {
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-sidebar-border bg-sidebar lg:col-span-2">
-          <div className="h-[420px]">
+          <div className="h-full"> 
+            
             <MapView
               center={
                 selected ? [selected.latitude, selected.longitude] : routeCoords[0]
