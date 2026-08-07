@@ -63,30 +63,30 @@ function BusIllustration() {
 
 export default function AuthLeftPanel({ heading, description, features }: AuthLeftPanelProps) {
   return (
-    <div className="relative flex flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br from-green-50 via-white to-green-50/80 p-10 lg:p-12">
+    <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-border bg-card p-8 transition-colors lg:p-10">
       {/* Decorative circles */}
-      <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-green-100/40" />
-      <div className="absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-green-100/30" />
+      <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/10" />
+      <div className="absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-primary/5" />
 
       <div className="relative z-10">
         {/* Logo */}
-        <div className="mb-8 flex items-center gap-3">
+        <div className="mb-6 flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-xl">
             🚌
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900">SmartBus</h1>
-            <p className="text-xs text-gray-500">Tracking System</p>
+            <h1 className="text-lg font-bold text-foreground">SmartBus</h1>
+            <p className="text-xs text-muted-foreground">Tracking System</p>
           </div>
         </div>
 
         {/* Heading */}
-        <h2 className="mb-3 text-3xl font-extrabold leading-tight text-gray-900 lg:text-4xl">
+        <h2 className="mb-3 text-3xl font-extrabold leading-tight text-foreground lg:text-4xl">
           {heading}
         </h2>
 
         {/* Description */}
-        <p className="max-w-md text-base leading-relaxed text-gray-500">
+        <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
           {description}
         </p>
       </div>
@@ -99,13 +99,13 @@ export default function AuthLeftPanel({ heading, description, features }: AuthLe
         {features.map((feature, idx) => (
           <div
             key={idx}
-            className="rounded-2xl border border-green-100 bg-white/70 p-4 backdrop-blur-sm"
+            className="rounded-2xl border border-border bg-background/60 p-3.5 backdrop-blur-sm"
           >
-            <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-green-50 text-primary">
+            <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
               {feature.icon}
             </div>
-            <h4 className="text-xs font-bold text-gray-900">{feature.title}</h4>
-            <p className="mt-0.5 text-[11px] leading-tight text-gray-500">{feature.description}</p>
+            <h4 className="text-xs font-bold text-foreground">{feature.title}</h4>
+            <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">{feature.description}</p>
           </div>
         ))}
       </div>

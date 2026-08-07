@@ -2,6 +2,16 @@ import { Request, Response, NextFunction } from "express";
 import StopModel from "./StopModel.js";
 
 export class StopController {
+  /** Public list for passenger stop pickers; it never changes route data. */
+  async getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const stops = await StopModel.find({}).lean();
+      res.status(200).json({ success: true, stops });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   /**
    * GET /api/stops/:routeId
    * Fetch the stop record for a specific route.

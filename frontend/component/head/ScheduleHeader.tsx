@@ -5,15 +5,20 @@ import { IoCalendarOutline, IoChevronDown } from "react-icons/io5";
 import { useLanguage } from "@/context/LanguageContext";
 import type { RouteData, RoutesResponse } from "@/utils/api";
 import { fetchApi } from "@/utils/api";
+import { formatRouteName } from "@/utils/routeFormatter";
 
 interface ScheduleHeaderProps {
   selectedRouteId?: string | null;
   onRouteChange?: (routeId: string | null) => void;
+  selectedDirection?: string;
+  onDirectionChange?: (direction: string) => void;
 }
 
 const ScheduleHeader = ({
   selectedRouteId = null,
   onRouteChange,
+  selectedDirection = "",
+  onDirectionChange,
 }: ScheduleHeaderProps) => {
   const { t, language } = useLanguage();
   const [routes, setRoutes] = useState<RouteData[]>([]);
@@ -79,7 +84,7 @@ const ScheduleHeader = ({
             <option value="">{t("schedule_header.all_routes")}</option>
             {routes.map((route) => (
               <option key={route._id} value={route._id}>
-                {route.routeNo} — {route.from} → {route.to}
+                {route.routeNo} — {formatRouteName(route.from, route.to)}
               </option>
             ))}
           </select>
@@ -98,11 +103,13 @@ const ScheduleHeader = ({
         <div className="relative">
           <select
             id="schedule-direction"
+            value={selectedDirection}
+            onChange={(e) => onDirectionChange?.(e.target.value)}
             className="w-full appearance-none rounded-lg border border-border bg-background py-2.5 pl-4 pr-10 text-sm text-foreground focus:border-primary focus:outline-none"
           >
-            <option>{t("schedule_header.all_directions")}</option>
-            <option>{t("schedule_header.outbound")}</option>
-            <option>{t("schedule_header.inbound")}</option>
+            <option value="">{t("schedule_header.all_directions")}</option>
+            <option value="Going">Going</option>
+            <option value="Coming">Coming</option>
           </select>
           <IoChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground" />
         </div>

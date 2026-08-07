@@ -22,6 +22,7 @@ import {
   RoutesResponse,
   RouteData,
 } from "@/utils/api";
+import { formatRouteName } from "@/utils/routeFormatter";
 
 const scheduleSchema = z.object({
   route: z.string().min(1, "Route is required"),
@@ -142,7 +143,7 @@ export default function SchedulesPage() {
         const s = item as unknown as ScheduleData;
         return (
           <span className="font-semibold text-foreground">
-            {s.route?.routeNo} {s.route?.from} → {s.route?.to}
+            {s.route?.routeNo} {formatRouteName(s.route?.from, s.route?.to)}
           </span>
         );
       },
@@ -227,7 +228,7 @@ export default function SchedulesPage() {
               <option value="">Select route</option>
               {routes.map((r) => (
                 <option key={r._id} value={r._id}>
-                  {r.routeNo} - {r.from} → {r.to}
+                  {r.routeNo} - {formatRouteName(r.from, r.to)}
                 </option>
               ))}
             </select>

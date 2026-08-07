@@ -56,10 +56,9 @@ const NotificationAlerts = ({ notifications, onViewAllAlerts }: Props) => {
     : DEFAULT_ALERTS;
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-
+    <div className="rounded-xl border border-border bg-card p-5 shadow-sm transition-colors">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-base font-bold sm:text-lg">Active Alerts</h3>
+        <h3 className="text-base font-bold text-foreground sm:text-lg">Active Alerts</h3>
 
         <button
           onClick={onViewAllAlerts}
@@ -80,9 +79,9 @@ const NotificationAlerts = ({ notifications, onViewAllAlerts }: Props) => {
               </div>
 
               <div className="flex-1">
-                <h4 className="text-sm font-semibold">{alert.title}</h4>
+                <h4 className="text-sm font-semibold text-foreground">{alert.title}</h4>
 
-                <div className="mt-1 flex justify-between gap-4 text-xs text-gray-500">
+                <div className="mt-1 flex justify-between gap-4 text-xs text-muted-foreground">
                   <span>{alert.description}</span>
 
                   <span>{alert.time}</span>
@@ -95,7 +94,7 @@ const NotificationAlerts = ({ notifications, onViewAllAlerts }: Props) => {
 
       <button
         onClick={onViewAllAlerts}
-        className="mt-4 w-full rounded-lg border border-red-200 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 active:scale-[0.98]"
+        className="mt-4 w-full rounded-lg border border-danger/30 py-2 text-sm font-medium text-danger transition hover:bg-danger/10 active:scale-[0.98]"
       >
         View All Alerts
       </button>

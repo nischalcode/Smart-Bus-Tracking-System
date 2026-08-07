@@ -40,8 +40,8 @@ const WhyChoose = () => {
     <section className="py-20 px-6 lg:px-16 bg-background text-foreground relative transition-colors">
       <div className="mx-auto flex flex-col lg:flex-row items-center gap-16">
        
-        <div className="w-full lg:w-1/2 p-10">
-          <h2 className="text-3xl lg:text-4xl font-bold mb-2 dark:text-primary">
+        <div className="w-full lg:w-1/2 p-4 sm:p-10">
+          <h2 className="text-3xl lg:text-4xl font-bold mb-2 text-foreground">
             {t("why_choose.title")}
           </h2>
 
@@ -53,16 +53,16 @@ const WhyChoose = () => {
 
               return (
                 <div key={index} className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-primary/20 flex items-center justify-center text-primary shrink-0">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
                     <Icon className="w-6 h-6" />
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-bold mb-2 dark:text-primary">
+                    <h4 className="text-sm font-bold mb-2 text-foreground">
                       {t(feature.title)}
                     </h4>
 
-                    <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
                       {t(feature.description)}
                     </p>
                   </div>
@@ -73,13 +73,13 @@ const WhyChoose = () => {
         </div>
 
        
-        <div className="w-full lg:w-1/2 flex justify-center relative">
-          <div className="relative w-75 h-137.5 overflow-visible">
+        <div className="w-full lg:w-1/2 flex justify-center items-center relative py-10 lg:py-0">
+          <div className="relative w-[280px] sm:w-[320px] aspect-[9/19] shrink-0">
            
-            <div className="absolute inset-0 bg-white rounded-[40px] border-8 border-gray-900 shadow-2xl overflow-visible">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-2xl"></div>
+            <div className="absolute inset-0 bg-background rounded-[40px] border-[6px] sm:border-8 border-sidebar shadow-2xl overflow-hidden">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 sm:w-32 h-5 sm:h-6 bg-sidebar rounded-b-2xl z-50"></div>
 
-              <div className="relative h-full bg-gray-100">
+              <div className="relative h-full w-full bg-muted">
               
                 <MapContainer
                   center={[27.7172, 85.324]}
@@ -91,7 +91,7 @@ const WhyChoose = () => {
                   touchZoom={false}
                   keyboard={false}
                   attributionControl={false}
-                  className="h-full w-full"
+                  className="h-full w-full z-0"
                 >
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
@@ -112,16 +112,16 @@ const WhyChoose = () => {
                   </Marker>
                 </MapContainer>
 
-                <div className="absolute top-12 left-4 right-4 z-20 rounded-xl bg-white p-4 shadow-md">
-                  <h3 className="text-xl font-bold text-black">12A</h3>
+                <div className="absolute top-12 left-4 right-4 z-20 rounded-xl border border-border bg-card p-4 shadow-md">
+                  <h3 className="text-xl font-bold text-foreground">12A</h3>
 
-                  <p className="text-xs text-gray-500 border-b pb-3 mb-3">
+                  <p className="text-xs text-muted-foreground border-b border-border pb-3 mb-3">
                     City Center → Airport
                   </p>
 
-                  <p className="text-[10px] text-gray-500">Next Stop</p>
+                  <p className="text-[10px] text-muted-foreground">Next Stop</p>
 
-                  <h4 className="text-sm font-bold text-black">Green Street</h4>
+                  <h4 className="text-sm font-bold text-foreground">Green Street</h4>
 
                   <p className="text-primary text-xs font-semibold">
                     2 min away
@@ -131,8 +131,8 @@ const WhyChoose = () => {
             </div>
 
            
-            <div className="absolute top-24 -right-10 z-50 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-xl">
-              <Bell className="w-7 h-7" />
+            <div className="absolute top-24 -right-4 sm:-right-6 z-50 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-xl">
+              <Bell className="w-6 h-6 sm:w-7 sm:h-7" />
             </div>
           </div>
         </div>

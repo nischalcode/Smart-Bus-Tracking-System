@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/context/AuthContext";
 import { fetchApi, BusData, BusResponse, BusesResponse, DriverData, DriversResponse, RouteData } from "@/utils/api";
+import { formatRouteName } from "@/utils/routeFormatter";
 import DataTable, { Column } from "@/component/ui/DataTable";
 import PageHeader from "@/component/ui/PageHeader";
 import Modal from "@/component/ui/Modal";
@@ -228,7 +229,7 @@ export default function BusesPage() {
 
         return (
           <span className="font-semibold text-primary">
-            {route.routeNo} ({route.from} → {route.to})
+            {route.routeNo} ({formatRouteName(route.from, route.to)})
           </span>
         );
       },
@@ -349,7 +350,7 @@ export default function BusesPage() {
                     <select {...register("assignedRoute")} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none">
                         <option value="">Select an available route...</option>
                         {availableRoutes.map(route => (
-                            <option key={route._id} value={route._id}>{route.from} - {route.to}</option>
+                            <option key={route._id} value={route._id}>{formatRouteName(route.from, route.to)}</option>
                         ))}
                     </select>
                  </div>

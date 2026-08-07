@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Mail, Lock, Eye, EyeOff, MapPin, Clock, Bell } from "lucide-react";
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, MapPin, Clock, Bell } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import AuthLeftPanel from "@/component/auth/AuthLeftPanel";
 
@@ -46,7 +46,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex w-full max-w-7xl gap-6 lg:gap-10">
+    <div className="flex w-full max-w-6xl items-stretch justify-center gap-6 lg:gap-8">
       {/* Left Panel */}
       <div className="hidden w-[45%] lg:block">
         <AuthLeftPanel
@@ -65,92 +65,103 @@ export default function LoginPage() {
       </div>
 
       {/* Right Panel — Form */}
-      <div className="flex w-full items-center justify-center lg:w-[55%]">
-        <div className="w-full max-w-130">
+      <div className="flex w-full flex-col justify-between py-1 lg:w-[55%]">
+        <div>
+          <Link
+            href="/"
+            aria-label="Back to Home"
+            className="mb-3 inline-flex min-h-11 items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Back to Home
+          </Link>
+        </div>
+
+        <div className="my-auto w-full">
           {/* Mobile Logo */}
-          <div className="mb-8 flex items-center gap-3 lg:hidden">
+          <div className="mb-6 flex items-center gap-3 lg:hidden">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-xl">
               🚌
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">SmartBus</h1>
-              <p className="text-xs text-gray-500">Tracking System</p>
+              <h1 className="text-lg font-bold text-foreground">SmartBus</h1>
+              <p className="text-xs text-muted-foreground">Tracking System</p>
             </div>
           </div>
 
-          <div className="rounded-3xl border border-gray-100 bg-white p-8 shadow-xl shadow-gray-100/50 sm:p-10">
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-xl transition-colors sm:p-8">
             {/* Header */}
-            <div className="mb-8">
-              <h2 className="text-2xl font-extrabold text-gray-900">Sign In</h2>
-              <p className="mt-1 text-sm text-gray-500">Enter your credentials to continue</p>
+            <div className="mb-6">
+              <h2 className="text-2xl font-extrabold text-foreground">Sign In</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Enter your credentials to continue</p>
             </div>
 
             {/* Error */}
             {error && (
-              <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="mb-5 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
                 {error}
               </div>
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               {/* Email */}
               <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-700">
+                <label className="mb-1.5 block text-sm font-semibold text-foreground">
                   Email / Phone Number
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <input
                     type="email"
                     placeholder="Enter your email or phone"
                     {...register("email")}
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3.5 pl-11 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10"
+                    className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
                 {errors.email && (
-                  <p className="mt-1.5 text-xs text-red-500">{errors.email.message}</p>
+                  <p className="mt-1 text-xs text-danger">{errors.email.message}</p>
                 )}
               </div>
 
               {/* Password */}
               <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-700">
+                <label className="mb-1.5 block text-sm font-semibold text-foreground">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <input
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
                     {...register("password")}
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3.5 pl-11 pr-12 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10"
+                    className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-10 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-600"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="mt-1.5 text-xs text-red-500">{errors.password.message}</p>
+                  <p className="mt-1 text-xs text-danger">{errors.password.message}</p>
                 )}
               </div>
 
               {/* Remember + Forgot */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between pt-0.5">
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                   />
-                  <span className="text-sm text-gray-600">Remember me</span>
+                  <span className="text-sm text-muted-foreground">Remember me</span>
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="text-sm font-semibold text-primary transition hover:text-green-700"
+                  className="text-sm font-semibold text-primary transition hover:underline"
                 >
                   Forgot Password?
                 </Link>
@@ -160,22 +171,22 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl bg-primary py-3.5 text-sm font-bold text-white shadow-lg shadow-green-200 transition hover:bg-green-700 hover:shadow-green-300 disabled:opacity-50"
+                className="h-11 w-full rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm transition hover:opacity-90 disabled:opacity-50"
               >
                 {loading ? "Signing In..." : "Sign In"}
               </button>
             </form>
 
             {/* Divider */}
-            <div className="my-7 flex items-center gap-4">
-              <div className="h-px flex-1 bg-gray-200" />
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">OR</span>
-              <div className="h-px flex-1 bg-gray-200" />
+            <div className="my-5 flex items-center gap-4">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">OR</span>
+              <div className="h-px flex-1 bg-border" />
             </div>
 
             {/* Social */}
-            <div className="space-y-3">
-              <button className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
+            <div className="space-y-2.5">
+              <button className="flex h-11 w-full items-center justify-center gap-3 rounded-xl border border-border bg-background text-sm font-medium text-foreground transition hover:bg-muted">
                 <svg className="h-5 w-5" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -184,7 +195,7 @@ export default function LoginPage() {
                 </svg>
                 Continue with Google
               </button>
-              <button className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
+              <button className="flex h-11 w-full items-center justify-center gap-3 rounded-xl border border-border bg-background text-sm font-medium text-foreground transition hover:bg-muted">
                 <svg className="h-5 w-5" fill="#1877F2" viewBox="0 0 24 24">
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                 </svg>
@@ -193,14 +204,17 @@ export default function LoginPage() {
             </div>
 
             {/* Bottom */}
-            <p className="mt-7 text-center text-sm text-gray-500">
+            <p className="mt-5 text-center text-sm text-muted-foreground">
               Don&apos;t have an account?{" "}
-              <Link href="/register" className="font-bold text-primary transition hover:text-green-700">
+              <Link href="/register" className="font-bold text-primary transition hover:underline">
                 Create Account
               </Link>
             </p>
           </div>
         </div>
+
+        {/* Bottom spacing placeholder for symmetry */}
+        <div className="hidden lg:block lg:h-11" />
       </div>
     </div>
   );

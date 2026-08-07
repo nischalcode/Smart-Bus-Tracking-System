@@ -1,5 +1,5 @@
- const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9006/api";
-//const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://sbts-backend.onrender.com/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9006/api";
+//  const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://smart-bus-tracking-system-backend.onrender.com/api";
 
 // Named stop — a waypoint with a human label and GPS coordinates
 export interface NamedStop {
@@ -24,6 +24,11 @@ export interface RouteStopResponse {
   stops: RouteStopRecord;
 }
 
+export interface RouteStopsResponse {
+  success: boolean;
+  stops: RouteStopRecord[];
+}
+
 export async function fetchStopsByRoute(
   routeId: string
 ): Promise<RouteStopRecord | null> {
@@ -33,6 +38,11 @@ export async function fetchStopsByRoute(
   } catch {
     return null;
   }
+}
+
+export async function fetchAllRouteStops(): Promise<RouteStopRecord[]> {
+  const data = await fetchApi<RouteStopsResponse>("/stops");
+  return data.stops ?? [];
 }
 
 export async function fetchApi<T>(
@@ -171,11 +181,16 @@ export interface TrackingData {
   latitude: number;
   longitude: number;
   speed: number;
+  currentStop?: string;
   nextStop?: string;
+  distanceToNextStop?: number;
+  remainingDistance?: number;
   eta?: string;
   status: string;
   currentIndex: number;
   driverName?: string;
+  direction?: string;
+  stopETAs?: { name: string; distance: number; eta: string }[];
 }
 
 export interface TrackingResponse {
@@ -211,11 +226,23 @@ export interface NotificationData {
   badgeColor: string;
   read?: boolean;
   createdAt: string;
+  // Event-based fields (present on system notifications)
+  source?: "manual" | "system";
+  eventType?: string;
+  eventKey?: string;
+  recipientRoles?: string[];
 }
 
 export interface NotificationsResponse {
   success: boolean;
   notifications: NotificationData[];
+  pagination?: { page: number; limit: number; total: number; pages: number };
+}
+
+export interface UnreadNotificationsResponse {
+  success: boolean;
+  notifications: NotificationData[];
+  count: number;
 }
 
 // Auth types
@@ -315,8 +342,60 @@ export interface NotificationResponse {
   notification: NotificationData;
 }
 
+// ─── Journey Planner Types ────────────────────────────────────────────────────
 
+export interface JourneyStop {
+  name: string;
+  lat?: number;
+  lng?: number;
+}
 
+export interface JourneyLeg {
+  busNumber: string;
+  busName: string;
+  routeNo: string;
+  routeFrom: string;
+  routeTo: string;
+  direction: string;
+  boardStop: string;
+  alightStop: string;
+  stops: JourneyStop[];
+  etaMinutes: number | null;
+  travelMinutes: number;
+  walkingMetersToStop: number;
+  trafficStatus: "Low" | "Moderate" | "High";
+  liveSpeed: number;
+  frequency: string;
+  scheduleStatus: string;
+}
 
+export interface JourneyOption {
+  legs: JourneyLeg[];
+  totalTravelMinutes: number;
+  totalWalkingMeters: number;
+  transfers: number;
+  waitingMinutes: number;
+  trafficStatus: "Low" | "Moderate" | "High";
+  score: number;
+  estimatedArrivalMinutes: number;
+}
 
+export interface JourneyRecommendationsResponse {
+  success: boolean;
+  count: number;
+  recommendations: JourneyOption[];
+}
 
+export async function fetchJourneyRecommendations(
+  origin: string,
+  destination: string
+): Promise<JourneyOption[]> {
+  const data = await fetchApi<JourneyRecommendationsResponse>(
+    "/journey/recommend",
+    {
+      method: "POST",
+      body: JSON.stringify({ origin, destination }),
+    }
+  );
+  return data.recommendations ?? [];
+}

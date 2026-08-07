@@ -10,6 +10,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
 import NotificationHeader from "@/component/head/NotificationHeader";
 import NotificationAlerts from "@/component/notification/NotificationAlerts";
 import NotificationBanner from "@/component/notification/NotificationBanner";
@@ -19,6 +20,7 @@ import TrackLayout from "@/component/track-layout/TrackLayout";
 import { useLanguage } from "@/context/LanguageContext";
 import type { NotificationData, NotificationsResponse } from "@/utils/api";
 import { fetchApi } from "@/utils/api";
+import ExpandableList from "@/component/ui/ExpandableList";
 
 const ICON_MAP: Record<string, LucideIcon> = {
   TriangleAlert,
@@ -36,13 +38,26 @@ const Page = () => {
   const [activeCategory, setActiveCategory] = useState<string>("All");
 
   useEffect(() => {
-    fetchApi<NotificationsResponse>("/notifications")
+    fetchApi<NotificationsResponse>("/notifications?recipient=passenger")
       .then((data) => {
         if (data.success && data.notifications)
           setNotifications(data.notifications);
       })
       .catch((err) => console.error("Failed to load notifications:", err))
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9006/api";
+    const socket = io(apiUrl.replace(/\/api$/, ""));
+    socket.on("notification:new", (notification: NotificationData & { recipientRoles?: string[] }) => {
+      if (notification.recipientRoles?.length && !notification.recipientRoles.includes("passenger")) return;
+      setNotifications((previous) => [notification, ...previous.filter((item) => item._id !== notification._id)]);
+      window.dispatchEvent(new CustomEvent("notifications:updated"));
+    });
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   async function markAllAsRead() {
@@ -118,37 +133,38 @@ const Page = () => {
                   );
                 }
 
-                return filtered.map((n) => {
-                  const Icon = ICON_MAP[n.icon] || TriangleAlert;
-                  return (
-                    <NotificationItems
-                      key={n._id}
-                      icon={Icon}
-                      title={n.title}
-                      description={n.description}
-                      badge={n.badge}
-                      time={new Date(n.createdAt).toLocaleString()}
-                      iconBg={n.iconBg}
-                      iconColor={n.iconColor}
-                      badgeBg={n.badgeBg}
-                      badgeColor={n.badgeColor}
-                      read={!!n.read}
-                      onMarkRead={() => markAsRead(n._id)}
+                return (
+                  <div className="max-h-[700px] overflow-y-auto pr-2">
+                    <ExpandableList
+                      items={filtered}
+                      initialCount={5}
+                      showMoreLabel={t("notifications.load_more") ?? "Load More"}
+                      showLessLabel="Show Less"
+                      renderItem={(n) => {
+                        const Icon = ICON_MAP[n.icon] || TriangleAlert;
+
+                        return (
+                          <NotificationItems
+                            key={n._id}
+                            icon={Icon}
+                            title={n.title}
+                            description={n.description}
+                            badge={n.badge}
+                            time={new Date(n.createdAt).toLocaleString()}
+                            iconBg={n.iconBg}
+                            iconColor={n.iconColor}
+                            badgeBg={n.badgeBg}
+                            badgeColor={n.badgeColor}
+                            read={!!n.read}
+                            onMarkRead={() => markAsRead(n._id)}
+                          />
+                        );
+                      }}
                     />
-                  );
-                });
+                  </div>
+                );
               })()
             )}
-
-            <div className="p-4 border-t border-brand-lightgray text-center">
-              <button
-                type="button"
-                className="text-brand-darkgreen font-medium text-sm hover:underline flex items-center justify-center gap-2 mx-auto"
-              >
-                {t("notifications.load_more") ?? "Load More"}{" "}
-                <i className="fa-solid fa-chevron-down text-xs"></i>
-              </button>
-            </div>
           </div>
         </div>
 

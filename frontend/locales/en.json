@@ -2,6 +2,7 @@
   "nav": {
     "home": "Home",
     "track_bus": "Track Bus",
+    "journey_planner": "Journey Planner",
     "routes": "Routes",
     "schedule": "Schedule",
     "notifications": "Notifications",

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Radio, Gauge, MapPinned } from "lucide-react";
 import type { TrackingData } from "@/utils/api";
+import { formatRouteName } from "@/utils/routeFormatter";
 
 interface LogEntry {
   id: string;
@@ -30,7 +31,7 @@ export default function RealtimeLogs({ tracking }: RealtimeLogsProps) {
       const prevSpeed = seen.current.get(t._id);
       seen.current.set(t._id, t.speed);
       const busNumber = t.bus?.busNumber || "Bus";
-      const route = t.route ? `${t.route.from} → ${t.route.to}` : "route";
+      const route = t.route ? formatRouteName(t.route.from, t.route.to) : "route";
 
       if (prevSpeed === undefined) {
         next.push({

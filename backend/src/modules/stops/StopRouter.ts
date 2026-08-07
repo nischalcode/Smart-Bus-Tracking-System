@@ -6,6 +6,7 @@ const stopsRouter = Router();
 const stopCtrl = new StopController();
 
 // Public — passengers/tracking can read stop info
+stopsRouter.get("/", stopCtrl.getAll.bind(stopCtrl));
 stopsRouter.get("/:routeId", stopCtrl.getByRouteId.bind(stopCtrl));
 
 // Protected — only admins can write stop data

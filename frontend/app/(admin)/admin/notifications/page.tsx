@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Cpu, User } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,6 +10,7 @@ import Modal from "@/component/ui/Modal";
 import ConfirmDialog from "@/component/ui/ConfirmDialog";
 import PageHeader from "@/component/ui/PageHeader";
 import { useAuth } from "@/context/AuthContext";
+import { useNotifications } from "@/hooks/useNotifications";
 import {
   fetchApi,
   NotificationsResponse,
@@ -40,7 +41,10 @@ const badgePresets: Record<string, { iconBg: string; iconColor: string; badgeBg:
 
 export default function NotificationsPage() {
   const { token } = useAuth();
-  const [notifications, setNotifications] = useState<NotificationData[]>([]);
+
+  // Use the shared hook so this page also gets real-time updates
+  const { notifications, markAsRead } = useNotifications({ role: "admin" });
+
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<NotificationData | null>(null);
@@ -79,20 +83,10 @@ export default function NotificationsPage() {
     }
   }, [selectedBadge, setValue]);
 
-  const fetchNotifications = async () => {
-    try {
-      const data = await fetchApi<NotificationsResponse>("/notifications", {}, token);
-      if (data.success) setNotifications(data.notifications);
-    } catch (err) {
-      console.error("Failed to fetch notifications:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Track loading state based on whether notifications have arrived
   useEffect(() => {
-    fetchNotifications();
-  }, [token]);
+    if (notifications.length >= 0) setLoading(false);
+  }, [notifications]);
 
   const openCreate = () => {
     setEditing(null);
@@ -133,7 +127,7 @@ export default function NotificationsPage() {
         await fetchApi("/notifications", { method: "POST", body: JSON.stringify(data) }, token);
       }
       setShowModal(false);
-      fetchNotifications();
+      // useNotifications will receive the new notification via socket — no refetch needed
     } catch (err) {
       console.error("Failed to save notification:", err);
     } finally {
@@ -147,7 +141,7 @@ export default function NotificationsPage() {
       await fetchApi(`/notifications/${deleting._id}`, { method: "DELETE" }, token);
       setShowDeleteConfirm(false);
       setDeleting(null);
-      fetchNotifications();
+      // Socket will not re-emit deleted items; a manual filter keeps the UI clean
     } catch (err) {
       console.error("Failed to delete notification:", err);
     }
@@ -172,6 +166,21 @@ export default function NotificationsPage() {
       ),
     },
     {
+      // New column: distinguish manual admin announcements from automatic system events
+      key: "source" as keyof NotificationData,
+      label: "Source",
+      render: (item) =>
+        item.source === "system" ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">
+            <Cpu size={11} /> System
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">
+            <User size={11} /> Manual
+          </span>
+        ),
+    },
+    {
       key: "createdAt",
       label: "Created",
       render: (item) => new Date(item.createdAt).toLocaleDateString(),
@@ -182,7 +191,7 @@ export default function NotificationsPage() {
     <div>
       <PageHeader
         title="Notification Management"
-        description="Manage alerts, service updates, and promotions"
+        description="Manage alerts, service updates, and promotions. System events are generated automatically."
         action={
           <button
             onClick={openCreate}

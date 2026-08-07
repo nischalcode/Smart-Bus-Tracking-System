@@ -12,6 +12,7 @@ import usersRouter from "../modules/users/UserRouter.js";
 import teamsRouter from "../modules/teams/TeamRouter.js";
 import tripRouter from "../modules/trips/TripRouter.js";
 import stopsRouter from "../modules/stops/StopRouter.js";
+import journeyRouter from "../modules/journey/JourneyRouter.js";
 
 const router = Router();
 
@@ -27,6 +28,7 @@ router.use("/dashboard", dashboardRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/teams", teamsRouter);
 router.use("/stops", stopsRouter);
+router.use("/journey", journeyRouter);
 
 // Future
 // router.use("/api/companies", companyRouter);

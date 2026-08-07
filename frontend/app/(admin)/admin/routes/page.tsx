@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/context/AuthContext";
 import { fetchApi, RouteData, RouteResponse, NamedStop, RouteStop, BusData, BusesResponse } from "@/utils/api";
+import { formatRouteName } from "@/utils/routeFormatter";
 import PageHeader from "@/component/ui/PageHeader";
 import Modal from "@/component/ui/Modal";
 import ConfirmDialog from "@/component/ui/ConfirmDialog";
@@ -225,7 +226,7 @@ const deleteRoute = async () => {
         onClose={() => setViewingRoute(null)}
         title={
           viewingRoute
-            ? `${viewingRoute.from} → ${viewingRoute.to}`
+            ? formatRouteName(viewingRoute.from, viewingRoute.to)
             : "Route"
         }
         size="lg"

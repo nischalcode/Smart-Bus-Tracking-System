@@ -7,11 +7,36 @@ export class NotificationController {
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
       const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
       const skip = (page - 1) * limit;
+      const recipient = req.query.recipient as string | undefined;
+      const filter: any = recipient
+        ? { $or: [{ source: "manual" }, { recipientRoles: recipient }] }
+        : {};
       const [notifications, total] = await Promise.all([
-        NotificationModel.find({}).sort({ createdAt: -1 }).skip(skip).limit(limit),
-        NotificationModel.countDocuments({}),
+        NotificationModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        NotificationModel.countDocuments(filter),
       ]);
       res.status(200).json({ success: true, notifications, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/notifications/unread?recipient=<role>
+   * Returns unread notifications scoped to the requesting role.
+   * Used to restore missed notifications when a client reconnects.
+   */
+  async getUnreadByRole(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const recipient = req.query.recipient as string | undefined;
+      const filter: any = { read: false };
+      if (recipient) {
+        filter.$or = [{ source: "manual" }, { recipientRoles: recipient }];
+      }
+      const notifications = await NotificationModel.find(filter)
+        .sort({ createdAt: -1 })
+        .limit(50);
+      res.status(200).json({ success: true, notifications, count: notifications.length });
     } catch (error) {
       next(error);
     }
@@ -39,7 +64,16 @@ export class NotificationController {
         iconColor,
         badgeBg,
         badgeColor,
+        source: "manual",
       });
+
+      // Broadcast manual notifications to all connected clients
+      try {
+        const { getIO } = await import("../../socket/index.js");
+        getIO()?.emit("notification:new", newNotification);
+      } catch {
+        // Non-critical
+      }
 
       res.status(201).json({ success: true, notification: newNotification });
     } catch (error) {

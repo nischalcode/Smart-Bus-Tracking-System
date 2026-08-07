@@ -4,6 +4,7 @@ import "./config/mongodb.js";
 import { seedDatabase } from "./config/seed.js";
 //import { startTrackingSimulation } from "./modules/tracking/TrackingSimulator.js";
 import { initializeSocket } from "./socket/index.js";
+import { eventDetectionService } from "./modules/notifications/EventDetectionService.js";
 
 const server = http.createServer(app);
 
@@ -15,6 +16,8 @@ const PORT = process.env.PORT || 9006;
 const startServer = async () => {
   // Seed default data if database is empty (mongodb.ts connects on import)
   await seedDatabase();
+  // Observe schedule and GPS freshness even when no new request arrives.
+  eventDetectionService.startMonitoring();
 
   // Start live GPS tracking simulator
   //startTrackingSimulation();

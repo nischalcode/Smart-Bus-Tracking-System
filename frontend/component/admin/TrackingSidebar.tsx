@@ -4,15 +4,19 @@ import { useState } from "react";
 import { Search, Gauge } from "lucide-react";
 import type { TrackingData } from "@/utils/api";
 import StatusBadge from "@/component/ui/StatusBadge";
+import { formatRouteName } from "@/utils/routeFormatter";
 
 interface TrackingSidebarProps {
   tracking: TrackingData[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  hideSearch?: boolean;
+  externalSearch?: string;
 }
 
-export default function TrackingSidebar({ tracking, selectedId, onSelect }: TrackingSidebarProps) {
-  const [search, setSearch] = useState("");
+export default function TrackingSidebar({ tracking, selectedId, onSelect, hideSearch, externalSearch }: TrackingSidebarProps) {
+  const [localSearch, setLocalSearch] = useState("");
+  const search = externalSearch !== undefined ? externalSearch : localSearch;
 
   const filtered = tracking.filter((t) => {
     if (!search.trim()) return true;
@@ -32,16 +36,18 @@ export default function TrackingSidebar({ tracking, selectedId, onSelect }: Trac
         Select a bus to focus the map on its live position.
       </p>
 
-      <div className="relative mt-4">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search bus or route..."
-          className="w-full rounded-lg border border-border bg-muted/60 py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
-        />
-      </div>
+      {!hideSearch && (
+        <div className="relative mt-4">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
+            placeholder="Search bus or route..."
+            className="w-full rounded-lg border border-border bg-muted/60 py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
+          />
+        </div>
+      )}
 
       <div className="scrollbar-thin mt-4 flex-1 space-y-2 overflow-y-auto pr-1">
         {filtered.length === 0 ? (
@@ -68,7 +74,7 @@ export default function TrackingSidebar({ tracking, selectedId, onSelect }: Trac
                 />
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                {t.route?.routeNo} • {t.route?.from} → {t.route?.to}
+                {t.route?.routeNo} • {formatRouteName(t.route?.from, t.route?.to)}
               </p>
               <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
                 <Gauge className="h-3.5 w-3.5" />

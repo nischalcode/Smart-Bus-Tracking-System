@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from "express";
 import TripModel from "./TripModel.js";
 import BusModel from "../buses/BusModel.js";
 import DriverModel from "../drivers/DriverModel.js";
+import RouteModel from "../routes/RouteModel.js";
+import { eventDetectionService } from "../notifications/EventDetectionService.js";
 
 export class TripController {
   // Start a trip
@@ -48,6 +50,9 @@ export class TripController {
       await bus.save();
       await driver.save();
 
+      const route = await RouteModel.findById(routeId).lean();
+      await eventDetectionService.tripStarted(trip, bus, route);
+
       res.status(201).json({
         success: true,
         message: "Trip started successfully",
@@ -90,6 +95,12 @@ export class TripController {
       await BusModel.findByIdAndUpdate(trip.bus, { status: "inactive" });
       // @ts-ignore
       await DriverModel.findByIdAndUpdate(trip.driver, { status: "available" });
+
+      const [bus, route] = await Promise.all([
+        BusModel.findById(trip.bus).lean(),
+        RouteModel.findById(trip.route).lean(),
+      ]);
+      await eventDetectionService.tripCompleted(trip, bus, route);
 
       res.status(200).json({
         success: true,

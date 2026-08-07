@@ -4,47 +4,32 @@ import { useEffect, useState } from "react";
 import { IoArrowForward, IoChevronDown, IoEyeOutline } from "react-icons/io5";
 import { useLanguage } from "@/context/LanguageContext";
 import type { ScheduleData, SchedulesResponse } from "@/utils/api";
-import { fetchApi } from "@/utils/api";
-
 type Props = {
+  schedules: ScheduleData[];
+  loading: boolean;
   onSelectSchedule?: (schedule: ScheduleData) => void;
   selectedId?: string | null;
-  routeFilterId?: string | null;
 };
 
 const BusScheduleTable = ({
+  schedules,
+  loading,
   onSelectSchedule,
   selectedId,
-  routeFilterId,
 }: Props) => {
   const { t } = useLanguage();
-  const [schedules, setSchedules] = useState<ScheduleData[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    fetchApi<SchedulesResponse>("/schedules")
-      .then((data) => {
-        if (data.success && data.schedules) setSchedules(data.schedules);
-      })
-      .catch((err) => console.error("Failed to load schedules:", err))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const filteredSchedules = routeFilterId
-    ? schedules.filter((schedule) => schedule.route?._id === routeFilterId)
-    : schedules;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card transition-colors">
+    <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-colors">
       <div className="border-b border-border px-6 py-4">
         <h3 className="text-lg font-bold text-foreground">
           {t("schedule_page.bus_schedules")}
         </h3>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto max-h-[500px] scrollbar-thin">
         <table className="w-full border-collapse text-left">
-          <thead className="border-b border-border bg-background">
+          <thead className="border-b border-border bg-background sticky top-0 z-10">
             <tr className="text-xs uppercase tracking-wide text-muted-foreground">
               <th className="px-6 py-3 font-medium">Route</th>
               <th className="px-6 py-3 font-medium">Bus Number</th>
@@ -55,7 +40,6 @@ const BusScheduleTable = ({
               <th className="px-6 py-3 text-center font-medium">Action</th>
             </tr>
           </thead>
-
           <tbody className="divide-y divide-border text-sm">
             {loading ? (
               <tr>
@@ -66,7 +50,7 @@ const BusScheduleTable = ({
                   {t("schedule_page.loading")}
                 </td>
               </tr>
-            ) : filteredSchedules.length === 0 ? (
+            ) : schedules.length === 0 ? (
               <tr>
                 <td
                   colSpan={7}
@@ -76,11 +60,11 @@ const BusScheduleTable = ({
                 </td>
               </tr>
             ) : (
-              filteredSchedules.map((schedule) => (
+              schedules.map((schedule) => (
                 <tr
                   key={schedule._id}
                   onClick={() => onSelectSchedule?.(schedule)}
-                  className={`cursor-pointer transition-colors hover:bg-muted/20 ${
+                  className={`cursor-pointer transition-colors hover:bg-muted/40 ${
                     selectedId === schedule._id
                       ? "bg-primary/10 ring-1 ring-inset ring-primary/30"
                       : schedule.active
@@ -156,10 +140,10 @@ const BusScheduleTable = ({
         </table>
       </div>
 
-      <div className="flex justify-center border-t border-border p-4">
+      <div className="flex justify-center border-t border-border p-4 bg-card shrink-0">
         <button
           type="button"
-          className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted/10"
+          className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
         >
           {t("schedule_page.view_more")}
           <IoChevronDown className="text-xs" />

@@ -33,7 +33,7 @@ const NotificationItems = ({
   const { t } = useLanguage();
   return (
     <section
-      className={`w-full rounded-lg border border-gray-200 bg-white p-4 ${read ? "opacity-60" : ""}`}
+      className={`w-full rounded-xl border border-border bg-card p-4 transition-colors ${read ? "opacity-60" : ""}`}
     >
       <div className="flex gap-4">
         {/* Icon */}
@@ -45,12 +45,12 @@ const NotificationItems = ({
 
         <div className="flex-1">
           <div className="flex items-start justify-between">
-            <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+            <h3 className="text-sm font-semibold text-foreground">{title}</h3>
 
-            <span className="text-xs text-gray-400">{time}</span>
+            <span className="text-xs text-muted-foreground">{time}</span>
           </div>
 
-          <p className="mt-1 text-sm text-gray-500 leading-6">{description}</p>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>
 
           <div className="mt-3 flex items-center gap-3">
             <span
@@ -63,7 +63,7 @@ const NotificationItems = ({
               <button
                 type="button"
                 onClick={onMarkRead}
-                className="ml-2 rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200"
+                className="ml-2 rounded-md bg-muted px-2 py-1 text-xs text-foreground transition-colors hover:bg-muted/80"
               >
                 {t("notifications.mark_as_read")}
               </button>

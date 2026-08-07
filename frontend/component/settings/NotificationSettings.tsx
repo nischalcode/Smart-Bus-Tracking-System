@@ -53,8 +53,8 @@ const NotificationSettings = () => {
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
-      <h2 className="mb-4 text-lg font-bold text-gray-900 sm:text-xl">Notification Settings</h2>
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm transition-colors sm:p-5">
+      <h2 className="mb-4 text-lg font-bold text-foreground sm:text-xl">Notification Settings</h2>
 
       <div className="space-y-4 sm:space-y-5">
         {items.map((item) => {
@@ -62,28 +62,28 @@ const NotificationSettings = () => {
           return (
             <div key={item.key} className="flex w-full items-center justify-between rounded-lg p-1">
               <div className="flex items-center gap-3 sm:gap-4">
-                <Icon className="h-5 w-5 text-gray-500 sm:h-6 sm:w-6" />
+                <Icon className="h-5 w-5 text-muted-foreground sm:h-6 sm:w-6" />
 
                 <div>
-                  <p className="text-sm font-medium text-gray-900 sm:text-base">{item.title}</p>
+                  <p className="text-sm font-medium text-foreground sm:text-base">{item.title}</p>
                   {showPreferences && (
-                    <p className="mt-0.5 text-xs text-gray-500 sm:text-sm">{item.description}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">{item.description}</p>
                   )}
                 </div>
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
-                <span className={`text-xs font-medium sm:text-base ${item.enabled ? "text-primary" : "text-gray-500"}`}>
+                <span className={`text-xs font-medium sm:text-base ${item.enabled ? "text-primary" : "text-muted-foreground"}`}>
                   {item.enabled ? "Enabled" : "Disabled"}
                 </span>
 
                 <button
                   onClick={() => toggle(item.key)}
                   aria-pressed={item.enabled}
-                  className={`h-6 w-10 rounded-full p-0.5 transition ${item.enabled ? "bg-primary" : "bg-gray-200"}`}
+                  className={`h-6 w-10 rounded-full p-0.5 transition ${item.enabled ? "bg-primary" : "bg-muted"}`}
                 >
                   <span
-                    className={`block h-5 w-5 rounded-full bg-white transform transition ${item.enabled ? "translate-x-4" : "translate-x-0"}`}
+                    className={`block h-5 w-5 rounded-full bg-card shadow-sm transform transition ${item.enabled ? "translate-x-4" : "translate-x-0"}`}
                   />
                 </button>
               </div>
@@ -92,26 +92,26 @@ const NotificationSettings = () => {
         })}
       </div>
 
-      <div className="my-4 border-t border-gray-200 sm:my-5" />
+      <div className="my-4 border-t border-border sm:my-5" />
 
       <button
         onClick={() => setShowPreferences((prev) => !prev)}
-        className="flex w-full items-center justify-between rounded-lg p-1 transition hover:bg-gray-50 active:scale-[0.99]"
+        className="flex w-full items-center justify-between rounded-lg p-1 transition hover:bg-muted active:scale-[0.99]"
       >
         <div className="flex items-center gap-3 sm:gap-4">
-          <Settings className="h-5 w-5 text-gray-500 sm:h-6 sm:w-6" />
+          <Settings className="h-5 w-5 text-muted-foreground sm:h-6 sm:w-6" />
 
           <div className="text-left">
-            <h3 className="text-sm font-medium text-gray-900 sm:text-base">Manage Preferences</h3>
+            <h3 className="text-sm font-medium text-foreground sm:text-base">Manage Preferences</h3>
 
-            <p className="text-xs text-gray-500 sm:text-sm">Choose what you want to receive</p>
+            <p className="text-xs text-muted-foreground sm:text-sm">Choose what you want to receive</p>
           </div>
         </div>
 
         {showPreferences ? (
-          <ChevronDown className="h-5 w-5 text-gray-400" />
+          <ChevronDown className="h-5 w-5 text-muted-foreground" />
         ) : (
-          <ChevronRight className="h-5 w-5 text-gray-400" />
+          <ChevronRight className="h-5 w-5 text-muted-foreground" />
         )}
       </button>
     </div>

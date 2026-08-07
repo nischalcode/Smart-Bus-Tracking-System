@@ -1,20 +1,99 @@
-import { Server } from "socket.io";
+import { Server, Socket } from "socket.io";
 import http from "http";
+import jwt from "jsonwebtoken";
+import NotificationModel from "../modules/notifications/NotificationModel.js";
+import { registerLocationSocket } from "./location.socket.js";
 
 let io: Server;
+
+/**
+ * Maps socket.id → role so we can target notifications by recipient role.
+ * Role is supplied by the client via a "auth" event right after connection.
+ */
+const socketRoles = new Map<string, string>();
+
+/** Emit an event to every connected socket whose role is in the given list. */
+export function emitToRoles(
+  roles: string[],
+  event: string,
+  data: unknown
+): void {
+  if (!io) return;
+  io.sockets.sockets.forEach((socket) => {
+    const role = socketRoles.get(socket.id);
+    // Broadcast to matching roles; also broadcast to unauthed sockets for
+    // backwards-compat (passengers browsing without being logged in).
+    if (!role || roles.includes(role)) {
+      socket.emit(event, data);
+    }
+  });
+}
+
+/**
+ * Deliver all unread notifications relevant to `role` to a single socket.
+ * Called when a client (re)connects and authenticates.
+ */
+async function deliverUnread(socket: Socket, role: string): Promise<void> {
+  try {
+    const filter: Record<string, unknown> =
+      role === "admin"
+        ? { read: false }
+        : {
+            read: false,
+            $or: [{ source: "manual" }, { recipientRoles: role }],
+          };
+
+    const unread = await NotificationModel.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+
+    if (unread.length > 0) {
+      socket.emit("notifications:unread", unread);
+    }
+  } catch {
+    // Non-critical — client can still poll via REST
+  }
+}
 
 export const initializeSocket = (server: http.Server) => {
   io = new Server(server, {
     cors: {
-      origin: "http://localhost:3000",
+      origin: process.env.FRONTEND_URL || "http://localhost:3000",
       methods: ["GET", "POST"],
     },
   });
 
-  io.on("connection", (socket) => {
+  io.on("connection", (socket: Socket) => {
     console.log("Client connected:", socket.id);
 
+    // Register location-update handler (driver mobile app)
+    registerLocationSocket(io, socket);
+
+    /**
+     * Client sends { role } immediately after connecting so we can target
+     * role-specific notifications. Unauthenticated / public clients may skip
+     * this and will receive only manual (admin-broadcast) notifications.
+     */
+    socket.on("auth", async (payload: { token?: string }) => {
+      // Roles are derived from the existing JWT, never trusted from the client.
+      let role = "passenger";
+      if (payload?.token && process.env.JWT_SECRET) {
+        try {
+          const decoded = jwt.verify(payload.token, process.env.JWT_SECRET) as { role?: string };
+          if (["passenger", "driver", "admin"].includes(decoded.role ?? "")) role = decoded.role!;
+        } catch {
+          // Public passengers remain supported without a token.
+        }
+      }
+      socketRoles.set(socket.id, role);
+      console.log(`Socket ${socket.id} authenticated as ${role}`);
+      // Deliver any unread notifications the client missed while offline
+      await deliverUnread(socket, role);
+    });
+
     socket.on("disconnect", () => {
+      socketRoles.delete(socket.id);
       console.log("Client disconnected:", socket.id);
     });
   });

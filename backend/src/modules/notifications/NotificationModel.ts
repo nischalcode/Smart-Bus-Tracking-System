@@ -10,7 +10,15 @@ const notificationSchema = new Schema(
     iconColor: { type: String, default: "text-red-500" },
     badgeBg: { type: String, default: "bg-red-100" },
     badgeColor: { type: String, default: "text-red-600" },
-      read: { type: Boolean, default: false },
+    read: { type: Boolean, default: false },
+    // Optional event metadata keeps manual announcements fully compatible.
+    source: { type: String, enum: ["manual", "system"], default: "manual" },
+    eventType: { type: String },
+    eventKey: { type: String },
+    recipientRoles: [{ type: String, enum: ["passenger", "driver", "admin"] }],
+    bus: { type: Schema.Types.ObjectId, ref: "Bus" },
+    route: { type: Schema.Types.ObjectId, ref: "Route" },
+    driver: { type: Schema.Types.ObjectId, ref: "Driver" },
   },
   { timestamps: true }
 );

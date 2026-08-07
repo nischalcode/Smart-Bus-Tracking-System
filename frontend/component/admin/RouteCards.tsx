@@ -5,27 +5,9 @@ import { toast } from "sonner";
 import type { RouteData } from "@/utils/api";
 import RouteMiniMap from "./RouteMiniMap";
 import StatusBadge from "@/component/ui/StatusBadge";
+import { formatRouteName } from "@/utils/routeFormatter";
 
-function haversineKm([lat1, lng1]: [number, number], [lat2, lng2]: [number, number]) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
-}
-
-function routeDistanceKm(coords: [number, number][]) {
-  if (!coords || coords.length < 2) return 0;
-  let total = 0;
-  for (let i = 1; i < coords.length; i++) {
-    total += haversineKm(coords[i - 1], coords[i]);
-  }
-  return total;
-}
+import { haversineKm, routeDistanceKm } from "@/utils/haversine";
 
 function statusTone(status: string) {
   const s = status?.toLowerCase() || "";
@@ -41,6 +23,8 @@ interface RouteCardsProps {
   onEdit: (route: RouteData) => void;
   onDelete: (route: RouteData) => void;
 }
+
+import ExpandableList from "@/component/ui/ExpandableList";
 
 export default function RouteCards({
   routes,
@@ -59,92 +43,101 @@ export default function RouteCards({
   }
 
   return (
-    <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-      {routes.map((route) => {
-        const distance = routeDistanceKm(route.pathCoordinates);
-        const buses = activeBusCount(route._id);
+    <ExpandableList
+      items={routes}
+      initialCount={6}
+      showMoreLabel="Show All Routes"
+      showLessLabel="Show Fewer Routes"
+    >
+      {(visibleRoutes) => (
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          {visibleRoutes.map((route) => {
+            const distance = routeDistanceKm(route.pathCoordinates);
+            const buses = activeBusCount(route._id);
 
-        return (
-          <div
-            key={route._id}
-            className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-          >
-            <div className="relative p-3 pb-0">
-              <RouteMiniMap coordinates={route.pathCoordinates} active={route.active} />
-              <div className="absolute left-5 top-5 rounded-lg bg-black/40 px-2 py-1 text-xs font-bold text-white backdrop-blur-sm">
-                #{route.routeNo}
-              </div>
-              <div className="absolute right-5 top-5">
-                <StatusBadge label={route.status || "Unknown"} tone={statusTone(route.status)} pulse={route.active} />
-              </div>
-            </div>
+            return (
+              <div
+                key={route._id}
+                className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <div className="relative p-3 pb-0">
+                  <RouteMiniMap coordinates={route.pathCoordinates} active={route.active} />
+                  <div className="absolute left-5 top-5 rounded-lg bg-black/40 px-2 py-1 text-xs font-bold text-white backdrop-blur-sm">
+                    #{route.routeNo}
+                  </div>
+                  <div className="absolute right-5 top-5">
+                    <StatusBadge label={route.status || "Unknown"} tone={statusTone(route.status)} pulse={route.active} />
+                  </div>
+                </div>
 
-            <div className="p-5">
-              <h3 className="text-base font-bold text-foreground">
-                {route.from} <span className="text-muted-foreground">→</span> {route.to}
-              </h3>
-              {route.via && (
-                <p className="mt-0.5 truncate text-xs text-muted-foreground">via {route.via}</p>
-              )}
+                <div className="p-5">
+                  <h3 className="text-base font-bold text-foreground">
+                    {formatRouteName(route.from, route.to)}
+                  </h3>
+                  {route.via && (
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">via {route.via}</p>
+                  )}
 
-              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-lg bg-muted p-2">
-                  <p className="text-sm font-bold text-foreground">
-                    {distance > 0 ? `${distance.toFixed(1)}` : "—"}
+                  <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-lg bg-muted p-2">
+                      <p className="text-sm font-bold text-foreground">
+                        {distance > 0 ? `${distance.toFixed(1)}` : "—"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">km</p>
+                    </div>
+                    <div className="rounded-lg bg-muted p-2">
+                      <p className="text-sm font-bold text-foreground">{buses}</p>
+                      <p className="text-[10px] text-muted-foreground">active buses</p>
+                    </div>
+                    <div className="rounded-lg bg-muted p-2">
+                      <p className="text-sm font-bold text-foreground">{route.stops?.length ?? 0}</p>
+                      <p className="text-[10px] text-muted-foreground">stops</p>
+                    </div>
+                  </div>
+
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Every {route.frequency} • {route.active ? "Active" : "Suspended"}
                   </p>
-                  <p className="text-[10px] text-muted-foreground">km</p>
-                </div>
-                <div className="rounded-lg bg-muted p-2">
-                  <p className="text-sm font-bold text-foreground">{buses}</p>
-                  <p className="text-[10px] text-muted-foreground">active buses</p>
-                </div>
-                <div className="rounded-lg bg-muted p-2">
-                  <p className="text-sm font-bold text-foreground">{route.stops?.length ?? 0}</p>
-                  <p className="text-[10px] text-muted-foreground">stops</p>
+
+                  <div className="mt-4 flex items-center gap-2">
+                    <button
+                      onClick={() => onView(route)}
+                      className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:brightness-110"
+                    >
+                      <MapPinned className="h-3.5 w-3.5" />
+                      View Map
+                    </button>
+
+                    <button
+                      onClick={() => onEdit(route)}
+                      className="inline-flex items-center justify-center rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted hover:text-primary"
+                      title="Edit route"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() =>
+                        toast.info(`Route optimization for ${route.routeNo} is coming soon`)
+                      }
+                      className="inline-flex items-center justify-center rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted hover:text-accent-foreground dark:hover:text-accent"
+                      title="Optimize route"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => onDelete(route)}
+                      className="inline-flex items-center justify-center rounded-lg border border-border p-2 text-muted-foreground hover:bg-danger/10 hover:text-danger"
+                      title="Delete route"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
-
-              <p className="mt-3 text-xs text-muted-foreground">
-                Every {route.frequency} • {route.active ? "Active" : "Suspended"}
-              </p>
-
-              <div className="mt-4 flex items-center gap-2">
-                <button
-                  onClick={() => onView(route)}
-                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:brightness-110"
-                >
-                  <MapPinned className="h-3.5 w-3.5" />
-                  View Map
-                </button>
-
-                <button
-                  onClick={() => onEdit(route)}
-                  className="inline-flex items-center justify-center rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted hover:text-primary"
-                  title="Edit route"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() =>
-                    toast.info(`Route optimization for ${route.routeNo} is coming soon`)
-                  }
-                  className="inline-flex items-center justify-center rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted hover:text-accent-foreground dark:hover:text-accent"
-                  title="Optimize route"
-                >
-                  <Sparkles className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => onDelete(route)}
-                  className="inline-flex items-center justify-center rounded-lg border border-border p-2 text-muted-foreground hover:bg-danger/10 hover:text-danger"
-                  title="Delete route"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
+            );
+          })}
+        </div>
+      )}
+    </ExpandableList>
   );
 }

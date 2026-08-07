@@ -55,21 +55,21 @@ const TrackHeader = ({ onMenuToggle }: Props) => {
   }, []);
 
   return (
-    <header className="flex h-20 items-center justify-between border-b border-gray-200 bg-white px-4 sm:px-6 lg:px-8">
+    <header className="flex h-20 items-center justify-between border-b border-border bg-card px-4 text-card-foreground sm:px-6 lg:px-8">
       <div className="flex items-center gap-4">
         <button
           onClick={onMenuToggle}
-          className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 md:hidden"
+          className="rounded-lg p-2 text-muted-foreground hover:bg-muted md:hidden"
           aria-label="Toggle menu"
         >
           <Menu className="h-6 w-6" />
         </button>
 
         <div>
-          <h2 className="text-xl font-bold text-gray-900 sm:text-2xl">
+          <h2 className="text-xl font-bold text-foreground sm:text-2xl">
             {page.title}
           </h2>
-          <p className="text-sm text-gray-500">{page.description}</p>
+          <p className="text-sm text-muted-foreground">{page.description}</p>
         </div>
       </div>
 
@@ -81,7 +81,7 @@ const TrackHeader = ({ onMenuToggle }: Props) => {
             className="relative"
             aria-label="Notifications"
           >
-            <Bell className="h-6 w-6 text-gray-600 hover:text-black" />
+            <Bell className="h-6 w-6 text-muted-foreground hover:text-foreground" />
 
             {notificationCount > 0 && (
               <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">

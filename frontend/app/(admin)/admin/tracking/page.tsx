@@ -13,6 +13,8 @@ import {
   BusData,
   RouteData,
   RoutesResponse,
+  fetchStopsByRoute,
+  NamedStop,
 } from "@/utils/api";
 import DataTable, { Column } from "@/component/ui/DataTable";
 import PageHeader from "@/component/ui/PageHeader";
@@ -23,6 +25,7 @@ import StatsCard from "@/component/ui/StatsCard";
 import StatusBadge from "@/component/ui/StatusBadge";
 import MapView from "@/component/LiveTracking/MapView";
 import TrackingSidebar from "@/component/admin/TrackingSidebar";
+import { formatRouteName } from "@/utils/routeFormatter";
 
 const trackingSchema = z.object({
   bus: z.string().min(1, "Bus is required"),
@@ -128,11 +131,20 @@ export default function TrackingPage() {
     return { avgSpeed, delayed, onTimePercent };
   }, [tracking]);
 
+  const [trackingNamedStops, setTrackingNamedStops] = useState<NamedStop[]>([]);
+
   const selected = tracking.find((t) => t._id === selectedId) ?? tracking[0];
   const selectedRoute = selected
     ? routes.find((r) => r._id === selected.route?._id)
     : undefined;
   const routeCoords = selectedRoute?.pathCoordinates ?? [];
+
+  useEffect(() => {
+    if (!selectedRoute?._id) return;
+    fetchStopsByRoute(selectedRoute._id)
+      .then((data) => { setTrackingNamedStops(data?.stops || []); })
+      .catch(console.error);
+  }, [selectedRoute?._id]);
 
   const columns: Column<TrackingData & Record<string, unknown>>[] = [
     {
@@ -146,7 +158,7 @@ export default function TrackingPage() {
       label: "Route",
       render: (item) => {
         const t = item as unknown as TrackingData;
-        return `${t.route?.routeNo || ""} ${t.route?.from || ""} → ${t.route?.to || ""}`;
+        return `${t.route?.routeNo || ""} ${formatRouteName(t.route?.from, t.route?.to)}`;
       },
     },
     {
@@ -155,6 +167,7 @@ export default function TrackingPage() {
       render: (item) => `${(item as unknown as TrackingData).speed} km/h`,
     },
     { key: "nextStop", label: "Next Stop" },
+    { key: "direction", label: "Direction" },
     { key: "eta", label: "ETA" },
     {
       key: "status",
@@ -212,68 +225,64 @@ export default function TrackingPage() {
               }
               routeCoordinates={routeCoords}
               routeLabel={
-                selectedRoute ? `${selectedRoute.from} → ${selectedRoute.to}` : undefined
+                selectedRoute ? formatRouteName(selectedRoute.from, selectedRoute.to) : undefined
               }
               showBus={!!selected}
               busPosition={selected ? [selected.latitude, selected.longitude] : undefined}
               busName={selected?.bus?.busNumber || "Bus"}
               speed={selected?.speed}
               eta={selected?.eta}
+              currentStop={selected?.currentStop}
               nextStop={selected?.nextStop}
+              remainingDistance={selected?.remainingDistance}
             />
           </div>
-          {tracking.length === 0 && (
-            <div className="flex items-center justify-center p-6 text-sm text-sidebar-muted">
-              No active tracking sessions. Initialize one to see it live here.
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Full list */}
-      <DataTable
-        data={tracking as unknown as (TrackingData & Record<string, unknown>)[]}
-        columns={columns}
-        onDelete={(item) => confirmDelete(item as unknown as TrackingData)}
-        searchPlaceholder="Search by bus number..."
-        emptyMessage="No tracking sessions yet."
-      />
+      <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
+        <DataTable
+          data={tracking as (TrackingData & Record<string, unknown>)[]}
+          columns={columns}
+          onDelete={(item) => confirmDelete(item as TrackingData)}
+        />
+      </div>
 
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Initialize Tracking">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-foreground">Bus</label>
+            <label className="text-sm font-medium text-foreground">Bus</label>
             <select
               {...register("bus")}
-              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
+              className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             >
-              <option value="">Select a bus</option>
+              <option value="">Select a Bus</option>
               {buses.map((b) => (
                 <option key={b._id} value={b._id}>
                   {b.busNumber}
                 </option>
               ))}
             </select>
-            {errors.bus && <p className="mt-1 text-xs text-danger">{errors.bus.message}</p>}
+            {errors.bus && <p className="mt-1 text-xs text-red-500">{errors.bus.message}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground">Route</label>
+            <label className="text-sm font-medium text-foreground">Route</label>
             <select
               {...register("route")}
-              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
+              className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             >
-              <option value="">Select a route</option>
+              <option value="">Select a Route</option>
               {routes.map((r) => (
                 <option key={r._id} value={r._id}>
-                  {r.routeNo} - {r.from} → {r.to}
+                  {r.routeNo}
                 </option>
               ))}
             </select>
-            {errors.route && <p className="mt-1 text-xs text-danger">{errors.route.message}</p>}
+            {errors.route && <p className="mt-1 text-xs text-red-500">{errors.route.message}</p>}
           </div>
 
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
               onClick={() => setShowModal(false)}

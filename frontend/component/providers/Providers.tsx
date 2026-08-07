@@ -2,18 +2,24 @@
 
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/context/AuthContext";
-import { ThemeProvider } from "@/context/ThemeContext";
+import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 import { LanguageProvider } from "@/context/LanguageContext";
+
+function ThemedToaster() {
+  const { isDark } = useTheme();
+  return <Toaster position="top-right" richColors theme={isDark ? "dark" : "light"} />;
+}
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <LanguageProvider>
       <ThemeProvider>
         <AuthProvider>
-          <Toaster position="top-right" richColors />
+          <ThemedToaster />
           {children}
         </AuthProvider>
       </ThemeProvider>
     </LanguageProvider>
   );
 }
+

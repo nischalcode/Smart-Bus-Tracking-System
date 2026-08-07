@@ -4,7 +4,8 @@ import { useEffect, useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { X, Search } from "lucide-react";
 import { useLiveTracking } from "@/hooks/useLiveTracking";
-import { RouteData } from "@/utils/api";
+import { RouteData, fetchStopsByRoute, NamedStop } from "@/utils/api";
+import { formatRouteName } from "@/utils/routeFormatter";
 
 const MapView = dynamic(() => import("./MapView"), {
   ssr: false,
@@ -20,6 +21,7 @@ const FullScreenMap = ({ onClose, initialRouteIndex = 0 }: FullScreenMapProps) =
   const { routes, trackingByRouteId } = useLiveTracking();
   const [selectedIndex, setSelectedIndex] = useState(initialRouteIndex);
   const [search, setSearch] = useState("");
+  const [namedStops, setNamedStops] = useState<NamedStop[]>([]);
 
   useEffect(() => {
     setSelectedIndex(initialRouteIndex);
@@ -46,6 +48,13 @@ const FullScreenMap = ({ onClose, initialRouteIndex = 0 }: FullScreenMapProps) =
     ? trackingByRouteId.get(activeRoute._id)
     : undefined;
 
+  useEffect(() => {
+    if (!activeRoute?._id) return;
+    fetchStopsByRoute(activeRoute._id)
+      .then((data) => { setNamedStops(data?.stops || []); })
+      .catch(console.error);
+  }, [activeRoute?._id]);
+
   const mapCenter: [number, number] | undefined = activeTracking
     ? [activeTracking.latitude, activeTracking.longitude]
     : activeRouteCoords.length > 0
@@ -63,8 +72,8 @@ const FullScreenMap = ({ onClose, initialRouteIndex = 0 }: FullScreenMapProps) =
   });
 
   return (
-    <div className="fixed inset-0 z-[1000] flex bg-white">
-      <div className="flex h-full w-[360px] flex-col border-r border-gray-200 bg-white">
+    <div className="fixed inset-0 z-[1000] flex flex-col bg-white md:flex-row">
+      <div className="flex max-h-[45vh] w-full shrink-0 flex-col border-b border-gray-200 bg-white md:h-full md:max-h-none md:w-[360px] md:border-b-0 md:border-r">
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
           <div>
             <h2 className="text-lg font-bold">Live Bus Tracking</h2>
@@ -120,7 +129,7 @@ const FullScreenMap = ({ onClose, initialRouteIndex = 0 }: FullScreenMapProps) =
                     </div>
                     <div>
                       <h5 className="text-sm font-semibold">
-                        {route.from} → {route.to}
+                        {formatRouteName(route.from, route.to)}
                       </h5>
                       <p className="mt-0.5 text-xs text-gray-500">
                         Every {route.frequency}
@@ -159,7 +168,7 @@ const FullScreenMap = ({ onClose, initialRouteIndex = 0 }: FullScreenMapProps) =
                 </span>
               </div>
               <p className="mb-3 text-xs text-gray-500">
-                {activeRoute?.from} → {activeRoute?.to}
+                {formatRouteName(activeRoute?.from, activeRoute?.to)}
               </p>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
@@ -180,12 +189,12 @@ const FullScreenMap = ({ onClose, initialRouteIndex = 0 }: FullScreenMapProps) =
         )}
       </div>
 
-      <div className="relative flex-1">
+      <div className="relative min-h-0 flex-1">
         <MapView
           center={mapCenter}
           routeCoordinates={activeRouteCoords}
           routeLabel={
-            activeRoute ? `${activeRoute.from} → ${activeRoute.to}` : undefined
+            activeRoute ? formatRouteName(activeRoute.from, activeRoute.to) : undefined
           }
           showBus={!!activeTracking}
           busPosition={
@@ -197,6 +206,9 @@ const FullScreenMap = ({ onClose, initialRouteIndex = 0 }: FullScreenMapProps) =
           speed={activeTracking?.speed}
           eta={activeTracking?.eta}
           nextStop={activeTracking?.nextStop}
+          direction={activeTracking?.direction}
+          namedStops={namedStops}
+          stopETAs={activeTracking?.stopETAs}
           fullScreen
         />
       </div>

@@ -33,7 +33,7 @@ const features = [
 
 const AboutUsHero = () => {
   return (
-    <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+    <section className="rounded-2xl border border-border bg-card p-6 shadow-sm transition-colors">
       <div className="flex flex-col items-center gap-8 lg:flex-row">
         {/* Left Image */}
         <div className="w-full lg:w-1/2">
@@ -53,18 +53,18 @@ const AboutUsHero = () => {
               About Smart Bus
             </span>
 
-            <h1 className="text-3xl font-bold leading-tight text-gray-900 md:text-4xl">
+            <h1 className="text-3xl font-bold leading-tight text-foreground md:text-4xl">
               Smarter Journeys. Better Cities.
             </h1>
           </div>
 
-          <p className="text-sm leading-7 text-gray-600">
+          <p className="text-sm leading-7 text-muted-foreground">
             Smart Bus Tracking System is an intelligent real-time tracking
             solution designed to make public transportation more reliable,
             efficient, and user-friendly.
           </p>
 
-          <p className="text-sm leading-7 text-gray-600">
+          <p className="text-sm leading-7 text-muted-foreground">
             We empower commuters with live bus tracking, accurate arrival
             predictions, and instant updates—so you can plan better, wait less,
             and travel smarter.
@@ -80,16 +80,16 @@ const AboutUsHero = () => {
                   key={feature.title}
                   className="flex items-start gap-3"
                 >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
                     <Icon className="h-4 w-4 text-primary" />
                   </div>
 
                   <div>
-                    <h4 className="text-xs font-semibold text-gray-900">
+                    <h4 className="text-xs font-semibold text-foreground">
                       {feature.title}
                     </h4>
 
-                    <p className="mt-1 text-[10px] text-gray-500">
+                    <p className="mt-1 text-[10px] text-muted-foreground">
                       {feature.description}
                     </p>
                   </div>

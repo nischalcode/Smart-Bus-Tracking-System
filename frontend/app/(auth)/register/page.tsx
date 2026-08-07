@@ -17,7 +17,7 @@ import {
   Clock,
   Bell,
   ChevronDown,
-  Check,
+  Check, ArrowLeft,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import AuthLeftPanel from "@/component/auth/AuthLeftPanel";
@@ -85,7 +85,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex w-full max-w-[1280px] gap-6 lg:gap-10">
+    <div className="flex w-full max-w-6xl items-stretch justify-center gap-6 lg:gap-8">
       {/* Left Panel */}
       <div className="hidden w-[45%] lg:block">
         <AuthLeftPanel
@@ -106,135 +106,146 @@ export default function RegisterPage() {
       </div>
 
       {/* Right Panel — Form */}
-      <div className="flex w-full items-center justify-center lg:w-[55%]">
-        <div className="w-full max-w-[520px]">
+      <div className="flex w-full flex-col justify-between py-1 lg:w-[55%]">
+        <div>
+          <Link
+            href="/"
+            aria-label="Back to Home"
+            className="mb-3 inline-flex min-h-11 items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Back to Home
+          </Link>
+        </div>
+
+        <div className="my-auto w-full">
           {/* Mobile Logo */}
-          <div className="mb-8 flex items-center gap-3 lg:hidden">
+          <div className="mb-6 flex items-center gap-3 lg:hidden">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-xl">
               🚌
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">SmartBus</h1>
-              <p className="text-xs text-gray-500">Tracking System</p>
+              <h1 className="text-lg font-bold text-foreground">SmartBus</h1>
+              <p className="text-xs text-muted-foreground">Tracking System</p>
             </div>
           </div>
 
-          <div className="rounded-3xl border border-gray-100 bg-white p-8 shadow-xl shadow-gray-100/50 sm:p-10">
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-xl transition-colors sm:p-8">
             {/* Header */}
-            <div className="mb-6">
-              <h2 className="text-2xl font-extrabold text-gray-900">Create an Account</h2>
-              <p className="mt-1 text-sm text-gray-500">Fill in the details below to get started</p>
+            <div className="mb-5">
+              <h2 className="text-2xl font-extrabold text-foreground">Create an Account</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Fill in the details below to get started</p>
             </div>
 
             {/* Error */}
             {error && (
-              <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="mb-4 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
                 {error}
               </div>
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
               {/* Name + Phone (2-col) */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-3.5 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">Full Name</label>
+                  <label className="mb-1.5 block text-sm font-semibold text-foreground">Full Name</label>
                   <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <input
                       type="text"
                       placeholder="John Doe"
                       {...register("name")}
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10"
+                      className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
-                  {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
+                  {errors.name && <p className="mt-1 text-xs text-danger">{errors.name.message}</p>}
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">Phone Number</label>
+                  <label className="mb-1.5 block text-sm font-semibold text-foreground">Phone Number</label>
                   <div className="relative">
-                    <Phone className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Phone className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <input
                       type="tel"
                       placeholder="+977 98XXXXXXX"
                       {...register("phone")}
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10"
+                      className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
-                  {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone.message}</p>}
+                  {errors.phone && <p className="mt-1 text-xs text-danger">{errors.phone.message}</p>}
                 </div>
               </div>
 
               {/* Email */}
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-gray-700">Email Address</label>
+                <label className="mb-1.5 block text-sm font-semibold text-foreground">Email Address</label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <input
                     type="email"
                     placeholder="john@example.com"
                     {...register("email")}
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10"
+                    className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
-                {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
+                {errors.email && <p className="mt-1 text-xs text-danger">{errors.email.message}</p>}
               </div>
 
               {/* Password + Confirm */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-3.5 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">Password</label>
+                  <label className="mb-1.5 block text-sm font-semibold text-foreground">Password</label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <input
                       type={showPassword ? "text" : "password"}
                       placeholder="Min 8 characters"
                       {...register("password")}
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-10 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10"
+                      className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-10 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
-                  {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>}
+                  {errors.password && <p className="mt-1 text-xs text-danger">{errors.password.message}</p>}
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">Confirm Password</label>
+                  <label className="mb-1.5 block text-sm font-semibold text-foreground">Confirm Password</label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <input
                       type={showConfirm ? "text" : "password"}
                       placeholder="Re-enter password"
                       {...register("confirmPassword")}
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-10 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10"
+                      className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-10 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirm(!showConfirm)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
                     >
                       {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
-                  {errors.confirmPassword && <p className="mt-1 text-xs text-red-500">{errors.confirmPassword.message}</p>}
+                  {errors.confirmPassword && <p className="mt-1 text-xs text-danger">{errors.confirmPassword.message}</p>}
                 </div>
               </div>
 
               {/* Password Requirements */}
               {password.length > 0 && (
-                <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                  <p className="mb-2 text-xs font-semibold text-gray-600">Password must contain</p>
-                  <div className="grid grid-cols-2 gap-1.5">
+                <div className="rounded-xl border border-border bg-muted/50 p-3">
+                  <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Password must contain</p>
+                  <div className="grid gap-1.5 sm:grid-cols-2">
                     {passwordChecks.map((check) => (
                       <div key={check.label} className="flex items-center gap-2">
-                        <div className={`flex h-4 w-4 items-center justify-center rounded-full ${check.met ? "bg-primary" : "bg-gray-200"}`}>
-                          {check.met && <Check size={10} className="text-white" />}
+                        <div className={`flex h-4 w-4 items-center justify-center rounded-full ${check.met ? "bg-primary" : "bg-border"}`}>
+                          {check.met && <Check size={10} className="text-primary-foreground" />}
                         </div>
-                        <span className={`text-xs ${check.met ? "text-gray-700" : "text-gray-400"}`}>{check.label}</span>
+                        <span className={`text-xs ${check.met ? "text-foreground" : "text-muted-foreground"}`}>{check.label}</span>
                       </div>
                     ))}
                   </div>
@@ -243,58 +254,58 @@ export default function RegisterPage() {
 
               {/* Role */}
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-gray-700">Select Role</label>
+                <label className="mb-1.5 block text-sm font-semibold text-foreground">Select Role</label>
                 <div className="relative">
                   <select
                     {...register("role")}
-                    className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 py-3 px-4 text-sm text-gray-900 outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10"
+                    className="h-11 w-full appearance-none rounded-xl border border-border bg-background px-4 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                   >
                     <option value="">Select your role</option>
                     <option value="passenger">Passenger</option>
                     <option value="driver">Driver</option>
                     <option value="admin">Admin</option>
                   </select>
-                  <ChevronDown className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <ChevronDown className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 </div>
-                {errors.role && <p className="mt-1 text-xs text-red-500">{errors.role.message}</p>}
+                {errors.role && <p className="mt-1 text-xs text-danger">{errors.role.message}</p>}
               </div>
 
               {/* Agree */}
-              <label className="flex items-start gap-2.5">
+              <label className="flex items-start gap-2.5 pt-0.5">
                 <input
                   type="checkbox"
                   {...register("agree")}
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary"
                 />
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-muted-foreground">
                   I agree to the{" "}
                   <span className="font-semibold text-primary">Terms of Service</span>{" "}
                   and{" "}
                   <span className="font-semibold text-primary">Privacy Policy</span>
                 </span>
               </label>
-              {errors.agree && <p className="text-xs text-red-500">{errors.agree.message}</p>}
+              {errors.agree && <p className="text-xs text-danger">{errors.agree.message}</p>}
 
               {/* Submit */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl bg-primary py-3.5 text-sm font-bold text-white shadow-lg shadow-green-200 transition hover:bg-green-700 hover:shadow-green-300 disabled:opacity-50"
+                className="h-11 w-full rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm transition hover:opacity-90 disabled:opacity-50"
               >
                 {loading ? "Creating Account..." : "Create Account"}
               </button>
             </form>
 
             {/* Divider */}
-            <div className="my-7 flex items-center gap-4">
-              <div className="h-px flex-1 bg-gray-200" />
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">OR</span>
-              <div className="h-px flex-1 bg-gray-200" />
+            <div className="my-5 flex items-center gap-4">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">OR</span>
+              <div className="h-px flex-1 bg-border" />
             </div>
 
             {/* Social */}
-            <div className="space-y-3">
-              <button className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
+            <div className="space-y-2.5">
+              <button className="flex h-11 w-full items-center justify-center gap-3 rounded-xl border border-border bg-background text-sm font-medium text-foreground transition hover:bg-muted">
                 <svg className="h-5 w-5" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -303,7 +314,7 @@ export default function RegisterPage() {
                 </svg>
                 Continue with Google
               </button>
-              <button className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
+              <button className="flex h-11 w-full items-center justify-center gap-3 rounded-xl border border-border bg-background text-sm font-medium text-foreground transition hover:bg-muted">
                 <svg className="h-5 w-5" fill="#1877F2" viewBox="0 0 24 24">
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                 </svg>
@@ -312,14 +323,17 @@ export default function RegisterPage() {
             </div>
 
             {/* Bottom */}
-            <p className="mt-7 text-center text-sm text-gray-500">
+            <p className="mt-5 text-center text-sm text-muted-foreground">
               Already have an account?{" "}
-              <Link href="/login" className="font-bold text-primary transition hover:text-green-700">
+              <Link href="/login" className="font-bold text-primary transition hover:underline">
                 Sign In
               </Link>
             </p>
           </div>
         </div>
+
+        {/* Bottom spacing placeholder for symmetry */}
+        <div className="hidden lg:block lg:h-11" />
       </div>
     </div>
   );

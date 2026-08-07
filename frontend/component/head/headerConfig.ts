@@ -3,6 +3,11 @@ export const headerConfig = {
       title: "Track Bus",
       description: "Live tracking of buses in real-time",
     },
+
+    "/journey-planner": {
+      title: "Journey Planner",
+      description: "Find the best available bus journey",
+    },
   
     "/routes": {
       title: "Routes",

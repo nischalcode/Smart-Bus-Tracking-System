@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import ScheduleModel from "./ScheduleModel.js";
+import { eventDetectionService } from "../notifications/EventDetectionService.js";
 
 export class ScheduleController {
   async getAllSchedules(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -30,6 +31,8 @@ export class ScheduleController {
         active,
       });
 
+      await eventDetectionService.scheduleChanged();
+
       res.status(201).json({ success: true, schedule: newSchedule });
     } catch (error) {
       next(error);
@@ -45,6 +48,7 @@ export class ScheduleController {
         res.status(404).json({ success: false, message: "Schedule not found." });
         return;
       }
+      await eventDetectionService.scheduleChanged();
       res.status(200).json({ success: true, schedule });
     } catch (error) {
       next(error);
