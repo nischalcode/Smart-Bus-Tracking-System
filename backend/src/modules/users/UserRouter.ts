@@ -6,6 +6,6 @@ const usersRouter = Router();
 const userCtrl = new UserController();
 
 usersRouter.get("/", userCtrl.getAllUsers.bind(userCtrl));
-usersRouter.delete("/:id", authenticate, authorize(["admin"]), userCtrl.deleteUser.bind(userCtrl));
+usersRouter.delete("/:id", authenticate, authorize(["admin", "super_admin"]), userCtrl.deleteUser.bind(userCtrl));
 
 export default usersRouter;

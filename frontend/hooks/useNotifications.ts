@@ -9,7 +9,7 @@ const SOCKET_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:9006/ap
 
 interface UseNotificationsOptions {
   /** The role used to filter notifications and authenticate to the socket. */
-  role?: "passenger" | "driver" | "admin";
+  role?: "public_user" | "driver" | "admin" | "super_admin";
 }
 
 interface UseNotificationsReturn {
@@ -29,7 +29,7 @@ interface UseNotificationsReturn {
  * 5. Exposes markAsRead / markAllAsRead helpers that stay in sync with state.
  */
 export function useNotifications({
-  role = "passenger",
+  role = "public_user",
 }: UseNotificationsOptions = {}): UseNotificationsReturn {
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +38,7 @@ export function useNotifications({
   // ── Initial REST fetch ────────────────────────────────────────────────────
   useEffect(() => {
     const endpoint =
-      role === "admin"
+      ["admin", "super_admin"].includes(role)
         ? "/notifications"
         : `/notifications?recipient=${role}`;
 

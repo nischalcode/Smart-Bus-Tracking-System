@@ -191,6 +191,8 @@ export interface TrackingData {
   driverName?: string;
   direction?: string;
   stopETAs?: { name: string; distance: number; eta: string }[];
+  isDeviated?: boolean;
+  deviationDistance?: number;
 }
 
 export interface TrackingResponse {

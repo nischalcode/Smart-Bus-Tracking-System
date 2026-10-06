@@ -59,7 +59,7 @@ export default function RegisterPage() {
     formState: { errors },
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { role: "" },
+    defaultValues: { role: "public_user" },
   });
 
   const password = watch("password", "");
@@ -254,16 +254,13 @@ export default function RegisterPage() {
 
               {/* Role */}
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-foreground">Select Role</label>
+                <label className="mb-1.5 block text-sm font-semibold text-foreground">Role</label>
                 <div className="relative">
                   <select
                     {...register("role")}
                     className="h-11 w-full appearance-none rounded-xl border border-border bg-background px-4 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                   >
-                    <option value="">Select your role</option>
-                    <option value="passenger">Passenger</option>
-                    <option value="driver">Driver</option>
-                    <option value="admin">Admin</option>
+                    <option value="public_user">Public User</option>
                   </select>
                   <ChevronDown className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 </div>

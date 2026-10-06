@@ -27,6 +27,8 @@ const trackingSchema = new Schema(
     remainingDistance: { type: Number },
     eta: { type: String },
     stopETAs: { type: Schema.Types.Mixed, default: [] },
+    isDeviated: { type: Boolean, default: false },
+    deviationDistance: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

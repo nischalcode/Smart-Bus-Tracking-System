@@ -81,6 +81,41 @@ const CenterOnBus = ({
 };
 
 // ==========================
+// Map Resize & Invalidate Handler
+// Ensures Leaflet recalculates size on container/responsive changes
+// ==========================
+const MapResizeHandler = () => {
+  const map = useMap();
+
+  useEffect(() => {
+    const handleResize = () => {
+      map.invalidateSize();
+    };
+
+    const timer = setTimeout(handleResize, 150);
+
+    const container = map.getContainer();
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && container) {
+      resizeObserver = new ResizeObserver(() => {
+        map.invalidateSize();
+      });
+      resizeObserver.observe(container);
+    }
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      clearTimeout(timer);
+      if (resizeObserver) resizeObserver.disconnect();
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [map]);
+
+  return null;
+};
+
+// ==========================
 // Zoom Controls
 // ==========================
 const defaultCenter: [number, number] = [27.7172, 85.324];
@@ -145,6 +180,9 @@ interface MapViewProps {
   showBus?: boolean;
   fullScreen?: boolean;
   stopETAs?: { name: string; distance: number; eta: string }[];
+  isDeviated?: boolean;
+  deviationDistance?: number;
+  status?: string;
 }
 
 const MapView = ({
@@ -163,6 +201,9 @@ const MapView = ({
   showBus = false,
   fullScreen = false,
   stopETAs: _stopETAs = [],
+  isDeviated = false,
+  deviationDistance = 0,
+  status: _status = "Live",
 }: MapViewProps) => {
 
   useEffect(() => {
@@ -176,9 +217,13 @@ const MapView = ({
   // Persistent ref to track progression through stops (never regresses)
   const progressionRef = useRef<{ nextIdx: number; wasArrived: boolean }>({
     nextIdx: 0,
-    
-    wasArrived: false,  
+    wasArrived: false,
   });
+
+  // Reset progression index whenever route or direction changes
+  useEffect(() => {
+    progressionRef.current = { nextIdx: 0, wasArrived: false };
+  }, [routeLabel, direction]);
 
   // ==========================
   // Dynamic Geofencing & Direction-Aware Stop Progression (updates live with bus movement)
@@ -403,7 +448,7 @@ const MapView = ({
   return (
     <div
       className={`relative overflow-hidden rounded-2xl border shadow ${
-        fullScreen ? "h-full w-full" : "h-full w-full min-h-100"
+        fullScreen ? "h-full w-full" : "h-full w-full min-h-[300px]"
       }`}
       style={{ height: "100%", width: "100%" }}
     >
@@ -413,6 +458,7 @@ const MapView = ({
         zoomControl={false}
         className="h-full w-full"
       >
+        <MapResizeHandler />
         <TileLayer
           attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -495,6 +541,11 @@ const MapView = ({
                 <p className="text-gray-500 font-medium">
                   Direction: {direction || "Going"}
                 </p>
+                {isDeviated && (
+                  <div className="rounded bg-red-100 p-1.5 text-xs font-bold text-red-700">
+                    ⚠️ Route Deviation (~{deviationDistance || 100}m off route)
+                  </div>
+                )}
                 <div className="mt-2 space-y-1">
                   {dynamicStopData ? (
                     <>
@@ -606,6 +657,12 @@ const MapView = ({
               <p className="mt-1 font-semibold text-foreground">Direction:</p>
               <p className="font-medium">{direction || "Going"}</p>
             </div>
+
+            {isDeviated && (
+              <div className="rounded-lg bg-red-500/10 p-2 text-xs font-semibold text-red-600 border border-red-500/20">
+                ⚠️ Off Assigned Route (~{deviationDistance || 100}m)
+              </div>
+            )}
 
             {dynamicStopData && (
               <>

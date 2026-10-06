@@ -1,7 +1,13 @@
 import NotificationModel from "./NotificationModel.js";
 import { emitToRoles } from "../../socket/index.js";
 
-export type RecipientRole = "passenger" | "driver" | "admin";
+export type RecipientRole =
+  | "public_user"
+  | "driver"
+  | "admin"
+  | "super_admin"
+  | "passenger"
+  | "company_admin";
 
 export interface SystemNotificationInput {
   eventType: string;

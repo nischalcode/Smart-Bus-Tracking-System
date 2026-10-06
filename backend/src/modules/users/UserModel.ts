@@ -9,7 +9,7 @@ const userSchema = new Schema(
     role: {
       type: String,
       enum: Object.values(UserRole),
-      default: UserRole.PASSENGER,
+      default: UserRole.PUBLIC_USER,
       required: true,
     },
     company: {

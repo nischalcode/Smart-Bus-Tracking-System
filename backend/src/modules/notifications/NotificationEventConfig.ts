@@ -1,5 +1,5 @@
 /**
- * Runtime configuration for automatic notification detection.  Environment
+ * Runtime configuration for automatic notification detection. Environment
  * variables keep the existing database schema and admin UI unchanged.
  */
 function positiveNumber(name: string, fallback: number): number {
@@ -9,7 +9,7 @@ function positiveNumber(name: string, fallback: number): number {
 
 export const notificationEventConfig = {
   approachingEtaMinutes: positiveNumber("NOTIFICATION_ETA_THRESHOLD_MINUTES", 3),
-  arrivalDistanceKm: positiveNumber("NOTIFICATION_ARRIVAL_DISTANCE_METERS", 40) / 1000,
+  arrivalDistanceKm: positiveNumber("NOTIFICATION_ARRIVAL_DISTANCE_METERS", 30) / 1000, // 30m geofence
   offlineTimeoutMinutes: positiveNumber("NOTIFICATION_OFFLINE_TIMEOUT_MINUTES", 10),
   delayThresholdMinutes: positiveNumber("NOTIFICATION_DELAY_THRESHOLD_MINUTES", 10),
   trafficSpeedKph: positiveNumber("NOTIFICATION_TRAFFIC_SPEED_KPH", 15),

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { io, Socket } from "socket.io-client";
 import {
   fetchApi,
   RoutesResponse,
@@ -9,7 +10,8 @@ import {
   TrackingData,
 } from "@/utils/api";
 
-const POLL_INTERVAL_MS = 5000;
+const SOCKET_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:9006/api").replace(/\/api$/, "");
+const POLL_INTERVAL_MS = 10000; // Background polling fallback
 
 export function useLiveTracking() {
   const [routes, setRoutes] = useState<RouteData[]>([]);
@@ -17,6 +19,7 @@ export function useLiveTracking() {
   const [loadingRoutes, setLoadingRoutes] = useState(true);
   const [loadingTracking, setLoadingTracking] = useState(true);
 
+  // ── Load routes ────────────────────────────────────────────────────────────
   useEffect(() => {
     fetchApi<RoutesResponse>("/routes")
       .then((data) => {
@@ -26,9 +29,11 @@ export function useLiveTracking() {
       .finally(() => setLoadingRoutes(false));
   }, []);
 
+  // ── Real-time Socket.IO updates + polling fallback ─────────────────────────
   useEffect(() => {
     let mounted = true;
 
+    // 1. Initial REST fetch
     const fetchTracking = () => {
       fetchApi<TrackingResponse>("/tracking")
         .then((data) => {
@@ -42,11 +47,43 @@ export function useLiveTracking() {
     };
 
     fetchTracking();
+
+    // 2. Connect to Socket.IO for real-time telemetry updates without page refresh
+    const socket: Socket = io(SOCKET_URL, {
+      reconnection: true,
+      transports: ["websocket", "polling"],
+    });
+
+    socket.on("tracking-update", (data: TrackingData[]) => {
+      if (!mounted || !Array.isArray(data) || data.length === 0) return;
+
+      setTracking((prev) => {
+        const next = [...prev];
+        for (const item of data) {
+          const incomingBusId = typeof item.bus === "string" ? item.bus : item.bus?._id;
+          const idx = next.findIndex((t) => {
+            const tBusId = typeof t.bus === "string" ? t.bus : t.bus?._id;
+            return (incomingBusId && tBusId === incomingBusId) || t._id === item._id;
+          });
+
+          if (idx !== -1) {
+            next[idx] = { ...next[idx], ...item };
+          } else {
+            next.push(item);
+          }
+        }
+        return next;
+      });
+    });
+
+    // 3. Fallback interval to guarantee sync in case of connection drop
     const id = setInterval(fetchTracking, POLL_INTERVAL_MS);
 
     return () => {
       mounted = false;
       clearInterval(id);
+      socket.off("tracking-update");
+      socket.disconnect();
     };
   }, []);
 
@@ -62,6 +99,7 @@ export function useLiveTracking() {
 
     return map;
   }, [tracking]);
+
   return {
     routes,
     tracking,

@@ -6,7 +6,7 @@ import { authenticate, authorize } from "../../middleware/AuthMiddleware.js";
 const notificationsRouter = Router();
 const notificationCtrl = new NotificationController();
 
-// Public / role-filtered listing (passengers, drivers, admin dashboard)
+// Public / role-filtered listing (public users, drivers, admin dashboard)
 notificationsRouter.get("/", notificationCtrl.getAllNotifications.bind(notificationCtrl));
 
 // Unread notifications for a given role — used by frontend on socket reconnect
@@ -16,7 +16,7 @@ notificationsRouter.get("/unread", notificationCtrl.getUnreadByRole.bind(notific
 notificationsRouter.post(
   "/",
   authenticate,
-  authorize(["admin"]),
+  authorize(["admin", "super_admin"]),
   validateBody(["title", "description", "badge", "icon"]),
   notificationCtrl.createNotification.bind(notificationCtrl)
 );
@@ -25,7 +25,7 @@ notificationsRouter.post(
 notificationsRouter.put(
   "/:id",
   authenticate,
-  authorize(["admin"]),
+  authorize(["admin", "super_admin"]),
   notificationCtrl.updateNotification.bind(notificationCtrl)
 );
 
@@ -33,7 +33,7 @@ notificationsRouter.put(
 notificationsRouter.delete(
   "/:id",
   authenticate,
-  authorize(["admin"]),
+  authorize(["admin", "super_admin"]),
   notificationCtrl.deleteNotification.bind(notificationCtrl)
 );
 

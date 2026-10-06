@@ -24,7 +24,7 @@ export default function AdminLayout({
     }
     try {
       const parsed = JSON.parse(user);
-      if (parsed.role !== "admin") {
+      if (!["admin", "super_admin"].includes(parsed.role)) {
         router.replace("/login");
         return;
       }

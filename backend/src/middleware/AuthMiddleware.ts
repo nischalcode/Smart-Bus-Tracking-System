@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { normalizeUserRole } from "../types/UserRole.js";
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -37,7 +38,10 @@ export const authenticate = (
       role: string;
       email: string;
     };
-    req.user = decoded;
+    req.user = {
+      ...decoded,
+      role: normalizeUserRole(decoded.role),
+    };
     next();
   } catch (error) {
     res.status(403).json({ success: false, message: "Invalid or expired token." });
@@ -49,9 +53,12 @@ export const authorize = (roles: string[]) => {
     if (!req.user) {
       res.status(401).json({ success: false, message: "Unauthorized." });
       return;
-        }
+    }
 
-    if (!roles.includes(req.user.role)) {
+    const normalizedUserRole = normalizeUserRole(req.user.role);
+    const isAllowed = roles.some((role) => normalizeUserRole(role) === normalizedUserRole);
+
+    if (!isAllowed) {
       res.status(403).json({ success: false, message: "Forbidden. Insufficient permissions." });
       return;
     }

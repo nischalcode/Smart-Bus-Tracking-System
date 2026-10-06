@@ -15,7 +15,7 @@ const notificationSchema = new Schema(
     source: { type: String, enum: ["manual", "system"], default: "manual" },
     eventType: { type: String },
     eventKey: { type: String },
-    recipientRoles: [{ type: String, enum: ["passenger", "driver", "admin"] }],
+    recipientRoles: [{ type: String, enum: ["public_user", "driver", "admin", "super_admin", "passenger", "company_admin"] }],
     bus: { type: Schema.Types.ObjectId, ref: "Bus" },
     route: { type: Schema.Types.ObjectId, ref: "Route" },
     driver: { type: Schema.Types.ObjectId, ref: "Driver" },

@@ -38,7 +38,7 @@ const Page = () => {
   const [activeCategory, setActiveCategory] = useState<string>("All");
 
   useEffect(() => {
-    fetchApi<NotificationsResponse>("/notifications?recipient=passenger")
+    fetchApi<NotificationsResponse>("/notifications?recipient=public_user")
       .then((data) => {
         if (data.success && data.notifications)
           setNotifications(data.notifications);
@@ -51,7 +51,7 @@ const Page = () => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9006/api";
     const socket = io(apiUrl.replace(/\/api$/, ""));
     socket.on("notification:new", (notification: NotificationData & { recipientRoles?: string[] }) => {
-      if (notification.recipientRoles?.length && !notification.recipientRoles.includes("passenger")) return;
+      if (notification.recipientRoles?.length && !notification.recipientRoles.includes("public_user")) return;
       setNotifications((previous) => [notification, ...previous.filter((item) => item._id !== notification._id)]);
       window.dispatchEvent(new CustomEvent("notifications:updated"));
     });

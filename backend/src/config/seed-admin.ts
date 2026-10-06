@@ -16,11 +16,14 @@ async function seedAdmin() {
     await mongoose.connect(MONGODB_URL, { dbName: MONGODB_NAME });
     console.log("Connected to MongoDB...");
 
-    const existingAdmin = await UserModel.findOne({ email: "admin@smartbus.com" });
+    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || "admin@smartbus.com";
+    const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || "admin123";
+
+    const existingAdmin = await UserModel.findOne({ email: superAdminEmail });
     if (existingAdmin) {
-      console.log("Admin user already exists:");
-      console.log("  Email:    admin@smartbus.com");
-      console.log("  Password: admin123");
+      console.log("Super admin user already exists:");
+      console.log(`  Email:    ${superAdminEmail}`);
+      console.log(`  Password: ${superAdminPassword}`);
       console.log("  Role:    ", existingAdmin.role);
       if (existingAdmin.role !== "super_admin") {
         await UserModel.updateOne({ _id: existingAdmin._id }, { $set: { role: "super_admin" } });
@@ -30,17 +33,17 @@ async function seedAdmin() {
       return;
     }
 
-    const hashedPassword = await bcrypt.hash("admin123", 10);
+    const hashedPassword = await bcrypt.hash(superAdminPassword, 10);
     await UserModel.create({
-      name: "Admin",
-      email: "admin@smartbus.com",
+      name: "Super Admin",
+      email: superAdminEmail,
       password: hashedPassword,
       role: "super_admin" as any,
     });
 
-    console.log("Admin user created successfully!");
-    console.log("  Email:    admin@smartbus.com");
-    console.log("  Password: admin123");
+    console.log("Super admin user created successfully!");
+    console.log(`  Email:    ${superAdminEmail}`);
+    console.log(`  Password: ${superAdminPassword}`);
     console.log("  Role:     super_admin");
 
     await mongoose.disconnect();

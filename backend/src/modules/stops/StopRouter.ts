@@ -13,14 +13,14 @@ stopsRouter.get("/:routeId", stopCtrl.getByRouteId.bind(stopCtrl));
 stopsRouter.post(
   "/",
   authenticate,
-  authorize(["admin"]),
+  authorize(["admin", "super_admin"]),
   stopCtrl.createOrReplace.bind(stopCtrl)
 );
 
 stopsRouter.delete(
   "/:routeId",
   authenticate,
-  authorize(["admin"]),
+  authorize(["admin", "super_admin"]),
   stopCtrl.deleteByRouteId.bind(stopCtrl)
 );
 

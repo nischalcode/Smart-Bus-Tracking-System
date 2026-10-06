@@ -1,7 +1,7 @@
 import RouteModel from "../routes/RouteModel.js";
 import ScheduleModel from "../schedules/ScheduleModel.js";
 import TrackingModel from "../tracking/TrackingModel.js";
-import NotificationService from "./NotificationService.js";
+import NotificationService, { type RecipientRole } from "./NotificationService.js";
 import { notificationEventConfig } from "./NotificationEventConfig.js";
 
 const notificationService = new NotificationService();
@@ -26,6 +26,8 @@ function scheduleTimeToday(value: string): Date | null {
 /** Observes persisted telemetry; it never changes tracking, trip, or schedule data. */
 export class EventDetectionService {
   private lastEtaByBus = new Map<string, number>();
+  // Tracks geofence stop presence to prevent repeated arrival alerts on every telemetry ping
+  private busArrivalState = new Map<string, { currentStop: string; arrived: boolean }>();
   private monitor: NodeJS.Timeout | undefined;
   private monitoring = false;
 
@@ -34,7 +36,7 @@ export class EventDetectionService {
       eventType: "trip_started", eventKey: `trip_started:${trip._id}`,
       title: "Bus started its trip",
       description: `${bus.busNumber} has started Route ${route?.routeNo ?? ""} (${route?.from ?? ""} - ${route?.to ?? ""}).`,
-      recipientRoles: ["passenger", "driver", "admin"], bus: bus._id, route: route?._id ?? trip.route, driver: trip.driver,
+      recipientRoles: ["public_user", "driver", "admin"], bus: bus._id, route: route?._id ?? trip.route, driver: trip.driver,
       cooldownMinutes: 24 * 60,
     });
   }
@@ -43,7 +45,7 @@ export class EventDetectionService {
     await notificationService.createSystemNotification({
       eventType: "trip_completed", eventKey: `trip_completed:${trip._id}`,
       title: "Bus completed its trip", description: `${bus?.busNumber ?? "Bus"} completed Route ${route?.routeNo ?? ""}.`,
-      recipientRoles: ["passenger", "driver", "admin"], bus: trip.bus, route: trip.route, driver: trip.driver,
+      recipientRoles: ["public_user", "driver", "admin"], bus: trip.bus, route: trip.route, driver: trip.driver,
       cooldownMinutes: 24 * 60,
     });
   }
@@ -59,14 +61,48 @@ export class EventDetectionService {
 
     if (tracking.nextStop && tracking.nextStop !== "N/A" && tracking.nextStop !== "Route End" && eta !== null && eta > 0 && eta <= notificationEventConfig.approachingEtaMinutes) {
       await this.notify("bus_approaching_stop", `approaching:${busKey}:${tracking.nextStop}`, "Bus approaching stop",
-        `${busLabel} will reach ${tracking.nextStop} in about ${eta} min.`, ["passenger", "driver"], tracking, route, 5);
+        `${busLabel} will reach ${tracking.nextStop} in about ${eta} min.`, ["public_user", "driver"], tracking, route, 5);
     }
 
-    const hasArrived = tracking.currentStop && tracking.currentStop !== "N/A" && tracking.currentStop !== "Not at any stop" &&
-      (tracking.atStop || Number(tracking.distanceToNextStop) <= notificationEventConfig.arrivalDistanceKm || tracking.eta === "Arrived");
+    // Geofencing arrival & departure deduplication
+    const hasArrived = Boolean(
+      tracking.currentStop &&
+      tracking.currentStop !== "N/A" &&
+      tracking.currentStop !== "Not at any stop" &&
+      (tracking.atStop || Number(tracking.distanceToNextStop) <= notificationEventConfig.arrivalDistanceKm || tracking.eta === "Arrived")
+    );
+
+    const prevStopState = this.busArrivalState.get(busKey);
+
     if (hasArrived) {
-      await this.notify("bus_arrived_stop", `arrived:${busKey}:${tracking.currentStop}`, "Bus arrived at stop",
-        `${busLabel} has arrived at ${tracking.currentStop}.`, ["passenger", "driver"], tracking, route, 10);
+      // Trigger arrival notification only on entry into the stop geofence
+      if (!prevStopState?.arrived || prevStopState.currentStop !== tracking.currentStop) {
+        this.busArrivalState.set(busKey, { arrived: true, currentStop: tracking.currentStop });
+        await this.notify("bus_arrived_stop", `arrived:${busKey}:${tracking.currentStop}`, "Bus arrived at stop",
+          `${busLabel} has arrived at ${tracking.currentStop}.`, ["public_user", "driver"], tracking, route, 10);
+      }
+    } else {
+      // Reset arrival status when bus departs the stop
+      if (prevStopState?.arrived) {
+        this.busArrivalState.set(busKey, { arrived: false, currentStop: "" });
+      }
+    }
+
+    // Route deviation detection for administrators
+    if (tracking.isDeviated) {
+      const devDistance = Math.round(tracking.deviationDistance || 100);
+      await this.notify(
+        "route_deviation",
+        `deviation:${busKey}`,
+        "Route Deviation Detected",
+        `${busLabel} on Route ${route.routeNo} is off-route by ~${devDistance}m.`,
+        ["admin"],
+        tracking,
+        route,
+        15,
+        "Alert",
+        "TriangleAlert"
+      );
     }
 
     const etaIncreased = previousEta !== undefined && eta !== null && eta - previousEta >= notificationEventConfig.delayThresholdMinutes;
@@ -74,13 +110,13 @@ export class EventDetectionService {
     const scheduleReportsDelay = Boolean(schedule?.status?.toLowerCase().includes("delay"));
     if (etaIncreased || scheduleReportsDelay || tracking.status?.toLowerCase().includes("delay")) {
       await this.notify("bus_delayed", `delayed:${busKey}`, "Bus delay detected",
-        `${busLabel} on Route ${route.routeNo} is delayed. Updated ETA: ${tracking.eta ?? "N/A"}.`, ["passenger", "driver", "admin"], tracking, route, 10, "Alert", "TriangleAlert");
+        `${busLabel} on Route ${route.routeNo} is delayed. Updated ETA: ${tracking.eta ?? "N/A"}.`, ["public_user", "driver", "admin"], tracking, route, 10, "Alert", "TriangleAlert");
     }
 
     const trafficEtaIncrease = previousEta !== undefined && eta !== null && eta - previousEta >= notificationEventConfig.trafficEtaIncreaseMinutes;
     if (Number(tracking.speed) > 0 && Number(tracking.speed) <= notificationEventConfig.trafficSpeedKph && trafficEtaIncrease) {
       await this.notify("heavy_traffic", `heavy_traffic:${busKey}`, "Heavy traffic detected",
-        `${busLabel} is moving at ${tracking.speed} km/h on Route ${route.routeNo}; ETA has increased.`, ["passenger", "driver", "admin"], tracking, route, 10, "Alert", "TriangleAlert");
+        `${busLabel} is moving at ${tracking.speed} km/h on Route ${route.routeNo}; ETA has increased.`, ["public_user", "driver", "admin"], tracking, route, 10, "Alert", "TriangleAlert");
     }
   }
 
@@ -88,7 +124,7 @@ export class EventDetectionService {
   async emergency(input: { bus?: unknown; route?: unknown; driver?: unknown; description: string }): Promise<void> {
     await notificationService.createSystemNotification({
       eventType: "emergency", eventKey: `emergency:${String(input.bus ?? input.route ?? Date.now())}`,
-      title: "Emergency alert", description: input.description, recipientRoles: ["passenger", "driver", "admin"],
+      title: "Emergency alert", description: input.description, recipientRoles: ["public_user", "driver", "admin"],
       bus: input.bus, route: input.route, driver: input.driver, cooldownMinutes: 1, badge: "Alert", icon: "TriangleAlert",
     });
   }
@@ -111,7 +147,7 @@ export class EventDetectionService {
     this.monitor = undefined;
   }
 
-  private async notify(eventType: string, eventKey: string, title: string, description: string, recipientRoles: ("passenger" | "driver" | "admin")[], tracking: any, route: any, cooldownMinutes: number, badge?: string, icon?: string): Promise<void> {
+  private async notify(eventType: string, eventKey: string, title: string, description: string, recipientRoles: RecipientRole[], tracking: any, route: any, cooldownMinutes: number, badge?: string, icon?: string): Promise<void> {
     await notificationService.createSystemNotification({
       eventType, eventKey, title, description, recipientRoles, bus: tracking.bus,
       route: route._id, driver: tracking.driverId, cooldownMinutes,

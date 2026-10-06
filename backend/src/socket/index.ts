@@ -2,6 +2,7 @@ import { Server, Socket } from "socket.io";
 import http from "http";
 import jwt from "jsonwebtoken";
 import NotificationModel from "../modules/notifications/NotificationModel.js";
+import { normalizeUserRole, UserRole } from "../types/UserRole.js";
 import { registerLocationSocket } from "./location.socket.js";
 
 let io: Server;
@@ -19,11 +20,21 @@ export function emitToRoles(
   data: unknown
 ): void {
   if (!io) return;
+
+  const normalizedTargets = roles.map((role) => normalizeUserRole(role));
   io.sockets.sockets.forEach((socket) => {
-    const role = socketRoles.get(socket.id);
+    const role = normalizeUserRole(socketRoles.get(socket.id));
+    const matchesRole =
+      !role ||
+      normalizedTargets.some((targetRole) => {
+        if (targetRole === role) return true;
+        if (targetRole === UserRole.ADMIN && role === UserRole.SUPER_ADMIN) return true;
+        if (targetRole === UserRole.SUPER_ADMIN && role === UserRole.ADMIN) return true;
+        return false;
+      });
     // Broadcast to matching roles; also broadcast to unauthed sockets for
-    // backwards-compat (passengers browsing without being logged in).
-    if (!role || roles.includes(role)) {
+    // backwards-compat (public users browsing without being logged in).
+    if (matchesRole) {
       socket.emit(event, data);
     }
   });
@@ -35,12 +46,14 @@ export function emitToRoles(
  */
 async function deliverUnread(socket: Socket, role: string): Promise<void> {
   try {
+    const normalizedRole = normalizeUserRole(role);
+    const isAdminRole = normalizedRole === UserRole.ADMIN || normalizedRole === UserRole.SUPER_ADMIN;
     const filter: Record<string, unknown> =
-      role === "admin"
+      isAdminRole
         ? { read: false }
         : {
             read: false,
-            $or: [{ source: "manual" }, { recipientRoles: role }],
+            $or: [{ source: "manual" }, { recipientRoles: normalizedRole }],
           };
 
     const unread = await NotificationModel.find(filter)
@@ -77,13 +90,24 @@ export const initializeSocket = (server: http.Server) => {
      */
     socket.on("auth", async (payload: { token?: string }) => {
       // Roles are derived from the existing JWT, never trusted from the client.
-      let role = "passenger";
+      let role: string = UserRole.PUBLIC_USER;
       if (payload?.token && process.env.JWT_SECRET) {
         try {
           const decoded = jwt.verify(payload.token, process.env.JWT_SECRET) as { role?: string };
-          if (["passenger", "driver", "admin"].includes(decoded.role ?? "")) role = decoded.role!;
+          const normalizedRole = normalizeUserRole(decoded.role);
+          const allowedRoles: string[] = [
+            UserRole.PUBLIC_USER,
+            UserRole.DRIVER,
+            UserRole.ADMIN,
+            UserRole.SUPER_ADMIN,
+            UserRole.LEGACY_PUBLIC_USER,
+            UserRole.LEGACY_COMPANY_ADMIN,
+          ];
+          if (allowedRoles.includes(normalizedRole)) {
+            role = normalizedRole;
+          }
         } catch {
-          // Public passengers remain supported without a token.
+          // Public users remain supported without a token.
         }
       }
       socketRoles.set(socket.id, role);

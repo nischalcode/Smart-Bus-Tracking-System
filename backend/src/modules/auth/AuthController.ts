@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import UserModel from "../users/UserModel.js";
 import { AuthenticatedRequest } from "../../middleware/AuthMiddleware.js";
-import { UserRole } from "../../types/UserRole.js";
+import { normalizeUserRole, UserRole } from "../../types/UserRole.js";
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 if (!JWT_SECRET) {
@@ -13,7 +13,11 @@ if (!JWT_SECRET) {
 export class AuthController {
   async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { name, email, password } = req.body;
+      const { name, email, password, role } = req.body;
+      if ([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.DRIVER].includes(role)) {
+        res.status(400).json({ success: false, message: "Only public user registrations are allowed from this endpoint." });
+        return;
+      }
 
       const existingUser = await UserModel.findOne({ email });
       if (existingUser) {
@@ -27,11 +31,12 @@ export class AuthController {
         name,
         email,
         password: hashedPassword,
-        role: UserRole.PASSENGER,
+        role: UserRole.PUBLIC_USER,
       });
 
+      const normalizedRole = normalizeUserRole(user.role);
       const token = jwt.sign(
-        { id: user._id, role: user.role, email: user.email },
+        { id: user._id, role: normalizedRole, email: user.email },
         JWT_SECRET,
         { expiresIn: "7d" }
       );
@@ -44,7 +49,7 @@ export class AuthController {
           id: user._id,
           name: user.name,
           email: user.email,
-          role: user.role,
+          role: normalizedRole,
         },
       });
     } catch (error) {
@@ -68,8 +73,9 @@ export class AuthController {
         return;
       }
 
+      const normalizedRole = normalizeUserRole(user.role);
       const token = jwt.sign(
-        { id: user._id, role: user.role, email: user.email },
+        { id: user._id, role: normalizedRole, email: user.email },
         JWT_SECRET,
         { expiresIn: "7d" }
       );
@@ -82,7 +88,7 @@ export class AuthController {
           id: user._id,
           name: user.name,
           email: user.email,
-          role: user.role,
+          role: normalizedRole,
         },
       });
     } catch (error) {
@@ -103,13 +109,14 @@ export class AuthController {
         return;
       }
 
+      const normalizedRole = normalizeUserRole(user.role);
       res.status(200).json({
         success: true,
         user: {
           id: user._id,
           name: user.name,
           email: user.email,
-          role: user.role,
+          role: normalizedRole,
         },
       });
     } catch (error) {

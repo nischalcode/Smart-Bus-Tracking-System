@@ -16,11 +16,13 @@ export const seedDatabase = async (): Promise<void> => {
 
     console.log("Seeding database with default routes, buses, and settings...");
 
-    // 1. Seed Admin User
-    const hashedAdminPassword = await bcrypt.hash("admin123", 10);
+    // 1. Seed Super Admin User
+    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || "admin@smartbus.com";
+    const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || "admin123";
+    const hashedAdminPassword = await bcrypt.hash(superAdminPassword, 10);
     await UserModel.create({
-      name: "Admin",
-      email: "admin@smartbus.com",
+      name: "Super Admin",
+      email: superAdminEmail,
       password: hashedAdminPassword,
       role: "super_admin" as any,
     });
