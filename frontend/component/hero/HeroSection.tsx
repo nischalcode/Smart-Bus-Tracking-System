@@ -1,6 +1,6 @@
 'use client'
 import Image from "next/image";
-import { Clock, Map, Navigation } from "lucide-react";
+import { Compass, Navigation } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -34,6 +34,7 @@ const HeroSection = () => {
 
         <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
           <button
+            type="button"
             onClick={() => router.push("/track-bus")}
             className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground transition-opacity hover:opacity-90"
           >
@@ -42,58 +43,14 @@ const HeroSection = () => {
           </button>
 
           <button
-            onClick={() => router.push("/routes")}
+            type="button"
+            onClick={() => router.push("/journey-planner")}
             className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border bg-card px-6 py-3 font-medium text-foreground transition-colors hover:bg-muted"
           >
-            <Map size={18} />
-            {t("hero.routes_btn")}
+            <Compass size={18} />
+            {t("hero.journey_btn")}
           </button>
         </div>
-
-        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Clock size={16} />
-            <span>{t("hero.live_updates")}</span>
-          </div>
-
-          <span>•</span>
-
-          <span>{t("hero.accurate_tracking")}</span>
-
-          <span>•</span>
-
-          <span>{t("hero.better_commute")}</span>
-        </div>
-      </div>
-
-      <div className="absolute bottom-10 right-10 hidden max-w-xs items-center gap-6 rounded-2xl border border-border bg-card p-5 shadow-xl lg:flex transition-colors z-10">
-        <section>
-          <div className="mb-1 flex items-center gap-2">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-primary"></span>
-            <span className="text-xs font-bold uppercase text-primary">
-              {t("hero.live_bus")}
-            </span>
-          </div>
-
-          <h2 className="text-3xl font-bold text-foreground">12A</h2>
-
-          <p className="text-xs text-muted-foreground">
-            City Center → Airport
-          </p>
-        </section>
-
-        <div className="h-12 w-px bg-border"></div>
-
-        <section>
-          <p className="text-xs text-muted-foreground">{t("hero.next_stop")}</p>
-
-          <h3 className="font-bold text-foreground">Green Street</h3>
-
-          <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-primary">
-            <Navigation size={16} />
-            <span>2 min {t("hero.away")}</span>
-          </div>
-        </section>
       </div>
     </section>
   );

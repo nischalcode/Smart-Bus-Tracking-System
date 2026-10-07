@@ -22,13 +22,19 @@ const ScheduleHeader = ({
 }: ScheduleHeaderProps) => {
   const { t, language } = useLanguage();
   const [routes, setRoutes] = useState<RouteData[]>([]);
+  const [routesError, setRoutesError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchApi<RoutesResponse>("/routes")
+    fetchApi<RoutesResponse>("/routes?limit=100")
       .then((data) => {
         if (data.success && data.routes) setRoutes(data.routes);
       })
-      .catch(() => {});
+      .catch((error) => {
+        console.error("Failed to load schedule route filters:", error);
+        setRoutesError(
+          error instanceof Error ? error.message : "Unable to load routes",
+        );
+      });
   }, []);
 
   function handleRouteChange(event: React.ChangeEvent<HTMLSelectElement>) {
@@ -90,6 +96,11 @@ const ScheduleHeader = ({
           </select>
           <IoChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground" />
         </div>
+        {routesError && (
+          <p role="alert" className="mt-1 text-xs text-danger">
+            Route list unavailable: {routesError}
+          </p>
+        )}
       </div>
 
       <div className="flex-1">

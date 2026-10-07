@@ -15,6 +15,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchRoadRoute } from "@/utils/routing";
 import { initLeafletIcons } from "@/utils/leaflet";
+import type { TrackingData } from "@/utils/api";
 
 const busIcon = (direction: string) => {
   const isComing = direction === "Coming";
@@ -54,7 +55,7 @@ const FitBounds = ({ positions }: { positions: LatLngExpression[] }) => {
 
   useEffect(() => {
     if (positions.length >= 2) {
-      map.fitBounds(positions as any, {
+      map.fitBounds(L.latLngBounds(positions), {
         padding: [40, 40],
       });
     }
@@ -130,6 +131,7 @@ const ZoomControls = ({
   return (
     <div className="absolute bottom-6 right-6 z-1000 flex flex-col gap-2">
       <button
+        type="button"
         onClick={() => map.zoomIn()}
         className="rounded-lg bg-card text-card-foreground p-2 shadow hover:bg-muted"
       >
@@ -137,6 +139,7 @@ const ZoomControls = ({
       </button>
 
       <button
+        type="button"
         onClick={() => map.zoomOut()}
         className="rounded-lg bg-card text-card-foreground p-2 shadow hover:bg-muted"
       >
@@ -144,6 +147,7 @@ const ZoomControls = ({
       </button>
 
       <button
+        type="button"
         onClick={() =>
           map.flyTo(deviceLocation ?? defaultCenter, 16)
         }
@@ -183,6 +187,9 @@ interface MapViewProps {
   isDeviated?: boolean;
   deviationDistance?: number;
   status?: string;
+  otherBuses?: TrackingData[];
+  focusOnBus?: boolean;
+  locationFresh?: boolean;
 }
 
 const MapView = ({
@@ -192,18 +199,21 @@ const MapView = ({
   busPosition,
   busName = "Bus",
   routeLabel = "Route",
-  direction = "Going",
-  eta = "N/A",
-  speed = 0,
-  currentStop = "N/A",
-  nextStop = "N/A",
+  direction = "",
+  eta,
+  speed,
+  currentStop = "",
+  nextStop = "",
   remainingDistance,
   showBus = false,
   fullScreen = false,
   stopETAs: _stopETAs = [],
   isDeviated = false,
   deviationDistance = 0,
-  status: _status = "Live",
+  status = "Location unavailable",
+  otherBuses = [],
+  focusOnBus = showBus,
+  locationFresh = false,
 }: MapViewProps) => {
 
   useEffect(() => {
@@ -215,21 +225,34 @@ const MapView = ({
   }, [routeLabel]);
 
   // Persistent ref to track progression through stops (never regresses)
-  const progressionRef = useRef<{ nextIdx: number; wasArrived: boolean }>({
+  const progressionRef = useRef<{
+    routeLabel: string;
+    direction: string;
+    nextIdx: number;
+    wasArrived: boolean;
+  }>({
+    routeLabel,
+    direction,
     nextIdx: 0,
     wasArrived: false,
   });
-
-  // Reset progression index whenever route or direction changes
-  useEffect(() => {
-    progressionRef.current = { nextIdx: 0, wasArrived: false };
-  }, [routeLabel, direction]);
 
   // ==========================
   // Dynamic Geofencing & Direction-Aware Stop Progression (updates live with bus movement)
   // ==========================
   const dynamicStopData = useMemo(() => {
-    if (!busPosition || !namedStops || namedStops.length === 0) return null;
+    if (
+      progressionRef.current.routeLabel !== routeLabel ||
+      progressionRef.current.direction !== direction
+    ) {
+      progressionRef.current = {
+        routeLabel,
+        direction,
+        nextIdx: 0,
+        wasArrived: false,
+      };
+    }
+    if (!locationFresh || !busPosition || !namedStops || namedStops.length === 0) return null;
 
     // Filter stops that have non-empty name and valid GPS coordinates
     const validStops = namedStops.filter(
@@ -361,13 +384,13 @@ const MapView = ({
 
     return {
       isArrived,
-      currentStopName: currentStop !== "N/A" ? currentStop : currentStopName,
-      nextStopName: nextStop !== "N/A" ? nextStop : targetNextStop?.name || "Next Stop",
+      currentStopName: currentStop || currentStopName,
+      nextStopName: nextStop || targetNextStop?.name || "Unavailable",
       nextStopDistance: nextStopDistanceStr,
       nextStopEta: nextStopEtaStr,
       stopStatusMap,
     };
-  }, [busPosition, namedStops, speed, direction, currentStop, nextStop]);
+  }, [busPosition, namedStops, speed, direction, routeLabel, currentStop, nextStop, locationFresh]);
 
   const [roadPath, setRoadPath] =
     useState<LatLngExpression[] | null>(null);
@@ -464,7 +487,7 @@ const MapView = ({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {showBus && busPosition ? (
+        {showBus && busPosition && focusOnBus ? (
           <CenterOnBus center={busPosition} />
         ) : routePolyline.length >= 2 ? (
           <FitBounds positions={routePolyline} />
@@ -483,12 +506,12 @@ const MapView = ({
         )}
 
         {/* Stop Markers — direction-aware status & popups */}
-        {namedStops.map((stop, index) => {
+        {namedStops.map((stop) => {
           if (typeof stop.lat !== "number" || typeof stop.lng !== "number") return null;
           const statusInfo = dynamicStopData?.stopStatusMap.get(stop.name);
 
           return (
-            <Marker key={index} position={[stop.lat, stop.lng]}>
+            <Marker key={`${stop.name}-${stop.lat}-${stop.lng}`} position={[stop.lat, stop.lng]}>
               <Popup>
                 <div className="space-y-1 min-w-[160px]">
                   <h3 className="font-bold text-base text-gray-900">{stop.name}</h3>
@@ -525,6 +548,23 @@ const MapView = ({
           );
         })}
 
+        {otherBuses.map((bus) => (
+          <Marker
+            key={bus._id}
+            position={[bus.latitude, bus.longitude]}
+            icon={busIcon(bus.direction || "Going")}
+          >
+            <Popup minWidth={160}>
+              <div className="space-y-1 text-sm">
+                <h3 className="font-bold">Bus: {bus.bus?.busNumber || "Bus"}</h3>
+                <p>Route: {bus.route?.routeNo || "Route unavailable"}</p>
+                <p>Direction: {bus.direction || "Unavailable"}</p>
+                <p>Status: {bus.status || "Location available"}</p>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+
         {/* Bus Marker — rich popup on click */}
         {showBus && busPosition && (
           <Marker
@@ -541,6 +581,9 @@ const MapView = ({
                 <p className="text-gray-500 font-medium">
                   Direction: {direction || "Going"}
                 </p>
+                <p className="text-gray-500 font-medium">
+                Status: {status}
+                </p>
                 {isDeviated && (
                   <div className="rounded bg-red-100 p-1.5 text-xs font-bold text-red-700">
                     ⚠️ Route Deviation (~{deviationDistance || 100}m off route)
@@ -551,7 +594,7 @@ const MapView = ({
                     <>
                       <p>
                         <span className="font-semibold text-green-600">Current Stop: </span>
-                        {dynamicStopData.currentStopName || "N/A"}
+                        {dynamicStopData.currentStopName || "Unavailable"}
                       </p>
                       {dynamicStopData.isArrived ? (
                         <>
@@ -577,11 +620,23 @@ const MapView = ({
                   ) : null}
                   <p>
                     <span className="font-semibold">Speed: </span>
-                    {!speed || speed === 0 ? "Stopped" : `${speed} km/h`}
+                    {!locationFresh
+                      ? "Unavailable"
+                      : typeof speed === "number"
+                        ? speed === 0
+                          ? "Stopped"
+                          : `${speed} km/h`
+                        : "Unavailable"}
+                  </p>
+                  <p>
+                    <span className="font-semibold">ETA: </span>
+                    {locationFresh ? eta || "Unavailable" : "Unavailable"}
                   </p>
                   <p>
                     <span className="font-semibold">Remaining Distance: </span>
-                    {typeof remainingDistance === "number" ? formatDistance(remainingDistance) : "N/A"}
+                    {locationFresh && typeof remainingDistance === "number"
+                      ? formatDistance(remainingDistance)
+                      : "Unavailable"}
                   </p>
                 </div>
               </div>
@@ -644,9 +699,17 @@ const MapView = ({
         <div className="absolute left-5 top-5 z-[1001] w-64 rounded-xl bg-card text-card-foreground p-4 shadow-xl border">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-bold text-foreground">Bus: {busName}</h2>
-            <span className="flex items-center gap-1 text-xs font-semibold text-primary">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-primary"></span>
-              LIVE
+            <span
+              className={`flex items-center gap-1 text-xs font-semibold ${
+                locationFresh ? "text-primary" : "text-muted-foreground"
+              }`}
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  locationFresh ? "live-dot bg-primary" : "bg-muted-foreground"
+                }`}
+              />
+              {locationFresh ? status : "Location unavailable"}
             </span>
           </div>
 
@@ -655,10 +718,10 @@ const MapView = ({
               <p className="font-semibold text-foreground">Route:</p>
               <p className="font-medium">{formattedRouteLabel}</p>
               <p className="mt-1 font-semibold text-foreground">Direction:</p>
-              <p className="font-medium">{direction || "Going"}</p>
+              <p className="font-medium">{direction || "Unavailable"}</p>
             </div>
 
-            {isDeviated && (
+            {locationFresh && isDeviated && (
               <div className="rounded-lg bg-red-500/10 p-2 text-xs font-semibold text-red-600 border border-red-500/20">
                 ⚠️ Off Assigned Route (~{deviationDistance || 100}m)
               </div>
@@ -668,7 +731,7 @@ const MapView = ({
               <>
                 <div>
                   <p className="font-semibold text-green-600 dark:text-green-400">Current Stop:</p>
-                  <p className="font-bold text-foreground">{dynamicStopData.currentStopName || "N/A"}</p>
+                  <p className="font-bold text-foreground">{dynamicStopData.currentStopName || "Unavailable"}</p>
                 </div>
                 {dynamicStopData.isArrived ? (
                   <div>
@@ -692,12 +755,25 @@ const MapView = ({
 
             <div>
               <p className="font-semibold text-foreground">Speed:</p>
-              <p>{!speed || speed === 0 ? "Stopped" : `${speed} km/h`}</p>
+              <p>
+                {!locationFresh
+                  ? "Unavailable"
+                  : typeof speed === "number"
+                    ? speed === 0
+                      ? "Stopped"
+                      : `${speed} km/h`
+                    : "Unavailable"}
+              </p>
+            </div>
+
+            <div>
+              <p className="font-semibold text-foreground">ETA:</p>
+              <p>{locationFresh ? eta || "Unavailable" : "Unavailable"}</p>
             </div>
 
             <div>
               <p className="font-semibold text-foreground">Remaining Distance:</p>
-              <p>{typeof remainingDistance === "number" ? formatDistance(remainingDistance) : "N/A"}</p>
+              <p>{locationFresh && typeof remainingDistance === "number" ? formatDistance(remainingDistance) : "Unavailable"}</p>
             </div>
           </div>
         </div>

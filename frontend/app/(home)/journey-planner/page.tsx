@@ -1,19 +1,32 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Search, Compass, ArrowRightLeft, Loader2, AlertCircle, RotateCcw } from "lucide-react";
 import TrackLayout from "@/component/track-layout/TrackLayout";
 import StopSelector from "@/component/journey/StopSelector";
 import RecommendationCard from "@/component/journey/RecommendationCard";
-import { fetchApi, RoutesResponse, JourneyOption, fetchAllRouteStops, fetchJourneyRecommendations } from "@/utils/api";
+import {
+  fetchAllRouteStops,
+  fetchApi,
+  fetchJourneyRecommendations,
+  type JourneyOption,
+  type RoutesResponse,
+} from "@/utils/api";
 
 const Page = () => {
   // ── Stop data from all routes ──────────────────────────────────────────────
   const [allStopNames, setAllStopNames] = useState<string[]>([]);
+  const [stopsLoading, setStopsLoading] = useState(true);
+  const [stopsError, setStopsError] = useState<string | null>(null);
   useEffect(() => {
-    Promise.all([fetchApi<RoutesResponse>("/routes"), fetchAllRouteStops()])
+    Promise.all([
+      fetchApi<RoutesResponse>("/routes?limit=100"),
+      fetchAllRouteStops(),
+    ])
       .then(([data, stopRecords]) => {
-        if (!data.success) return;
+        if (!data.success) {
+          throw new Error("The route service returned an unsuccessful response.");
+        }
         const names = new Set<string>();
         for (const route of data.routes) {
           for (const stop of route.stops ?? []) {
@@ -27,7 +40,13 @@ const Page = () => {
         }
         setAllStopNames(Array.from(names).sort());
       })
-      .catch(console.error);
+      .catch((error) => {
+        console.error("Failed to load journey stops:", error);
+        setStopsError(
+          error instanceof Error ? error.message : "Unable to load stop names.",
+        );
+      })
+      .finally(() => setStopsLoading(false));
   }, []);
 
   // ── Form state ─────────────────────────────────────────────────────────────
@@ -58,8 +77,12 @@ const Page = () => {
         destination.trim()
       );
       setRecommendations(results);
-    } catch (err: any) {
-      setError(err?.message || "Failed to fetch recommendations. Please try again.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to fetch recommendations. Please try again.",
+      );
       setRecommendations([]);
     } finally {
       setLoading(false);
@@ -96,9 +119,9 @@ const Page = () => {
 
         {/* ── Search card ── */}
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+          <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-end">
             {/* Origin */}
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <StopSelector
                 id="origin-stop"
                 label="From (Origin)"
@@ -110,7 +133,7 @@ const Page = () => {
             </div>
 
             {/* Swap button */}
-            <div className="flex justify-center sm:pb-0.5">
+            <div className="flex justify-center lg:pb-0.5">
               <button
                 type="button"
                 onClick={swapStops}
@@ -122,7 +145,7 @@ const Page = () => {
             </div>
 
             {/* Destination */}
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <StopSelector
                 id="destination-stop"
                 label="To (Destination)"
@@ -139,7 +162,7 @@ const Page = () => {
                 type="button"
                 onClick={handleSearch}
                 disabled={!canSearch || loading}
-                className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+                className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 lg:flex-none"
               >
                 {loading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -161,6 +184,18 @@ const Page = () => {
             </div>
           </div>
         </div>
+
+        {stopsError && (
+          <p role="alert" className="mt-3 text-sm text-danger">
+            Stop suggestions are unavailable: {stopsError}. You can still enter
+            a stop name manually.
+          </p>
+        )}
+        {stopsLoading && (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Loading available stops…
+          </p>
+        )}
 
         {/* ── Results ── */}
         <div className="mt-6">
@@ -221,7 +256,12 @@ const Page = () => {
               </p>
               {recommendations.map((option, idx) => (
                 <RecommendationCard
-                  key={idx}
+                  key={option.legs
+                    .map(
+                      (leg) =>
+                        `${leg.routeNo}:${leg.boardStop}:${leg.alightStop}`,
+                    )
+                    .join("|")}
                   option={option}
                   rank={idx + 1}
                 />

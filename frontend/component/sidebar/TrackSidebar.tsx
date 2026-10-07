@@ -37,14 +37,16 @@ const TrackSidebar = ({ isOpen = false, onClose }: Props) => {
   return (
     <>
       {isOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+        <button
+          type="button"
+          aria-label="Close menu"
+          className="fixed inset-0 z-40 cursor-default bg-black/50 md:hidden"
           onClick={onClose}
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col justify-between overflow-y-auto border-r border-border bg-card text-card-foreground transition-transform duration-200 md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col justify-between overflow-y-auto border-r border-border bg-card text-card-foreground shadow-xl transition-transform duration-200 md:static md:shadow-none md:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -66,6 +68,7 @@ const TrackSidebar = ({ isOpen = false, onClose }: Props) => {
               </div>
             </Link>
             <button
+              type="button"
               onClick={onClose}
               className="rounded-lg p-2 text-muted-foreground hover:bg-muted md:hidden"
               aria-label="Close menu"
@@ -136,10 +139,10 @@ const TrackSidebar = ({ isOpen = false, onClose }: Props) => {
             <div>
               <p className="text-xs font-medium">Need Help?</p>
               <Link
-                href="/support"
+                href="/about"
                 className="text-xs text-primary hover:underline"
               >
-                Contact Support
+                About SmartBus
               </Link>
             </div>
           </div>

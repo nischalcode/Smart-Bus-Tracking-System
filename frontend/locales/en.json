@@ -17,12 +17,30 @@
     "subtitle": "Real-time bus tracking for a smarter commute. Know your bus. Plan your time. Reach on time.",
     "track_btn": "Track Your Bus",
     "routes_btn": "View Routes",
+    "journey_btn": "Plan a Journey",
     "live_updates": "Live Updates",
     "accurate_tracking": "Accurate Tracking",
     "better_commute": "Better Commute",
     "live_bus": "Live Bus",
     "next_stop": "Next Stop",
     "away": "away"
+  },
+  "home_overview": {
+    "popular_routes": "Popular Routes",
+    "active_buses": "Active Buses",
+    "latest_alerts": "Latest Service Alerts",
+    "upcoming_schedules": "Upcoming Schedules",
+    "view_all": "View all",
+    "loading": "Loading service information…",
+    "unavailable": "Service information is unavailable right now.",
+    "no_routes": "No routes are available yet.",
+    "no_active_buses": "No recent bus locations are available.",
+    "no_alerts": "No current service alerts.",
+    "no_schedules": "No schedule information is available.",
+    "active": "active",
+    "frequency": "Frequency",
+    "service_window": "Service window",
+    "location_unavailable": "Location unavailable"
   },
   "features": {
     "live_tracking": {

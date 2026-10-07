@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { IoArrowForward, IoChevronDown, IoEyeOutline } from "react-icons/io5";
+import { IoArrowForward, IoEyeOutline } from "react-icons/io5";
 import { useLanguage } from "@/context/LanguageContext";
-import type { ScheduleData, SchedulesResponse } from "@/utils/api";
+import type { ScheduleData } from "@/utils/api";
 type Props = {
   schedules: ScheduleData[];
   loading: boolean;
+  error?: string | null;
   onSelectSchedule?: (schedule: ScheduleData) => void;
   selectedId?: string | null;
 };
@@ -14,6 +14,7 @@ type Props = {
 const BusScheduleTable = ({
   schedules,
   loading,
+  error,
   onSelectSchedule,
   selectedId,
 }: Props) => {
@@ -27,8 +28,8 @@ const BusScheduleTable = ({
         </h3>
       </div>
 
-      <div className="overflow-x-auto max-h-[500px] scrollbar-thin">
-        <table className="w-full border-collapse text-left">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[700px] border-collapse text-left">
           <thead className="border-b border-border bg-background sticky top-0 z-10">
             <tr className="text-xs uppercase tracking-wide text-muted-foreground">
               <th className="px-6 py-3 font-medium">Route</th>
@@ -48,6 +49,12 @@ const BusScheduleTable = ({
                   className="p-6 text-center text-muted-foreground"
                 >
                   {t("schedule_page.loading")}
+                </td>
+              </tr>
+            ) : error ? (
+              <tr>
+                <td colSpan={7} className="p-6 text-center text-danger">
+                  Unable to load schedule: {error}
                 </td>
               </tr>
             ) : schedules.length === 0 ? (
@@ -113,13 +120,14 @@ const BusScheduleTable = ({
 
                   <td className="px-6 py-4">
                     <span className="rounded-md bg-muted px-3 py-1 text-xs font-medium text-foreground">
-                      {schedule.status || "N/A"}
+                      {schedule.status || "Unavailable"}
                     </span>
                   </td>
 
                   <td className="px-6 py-4 text-center">
                     <button
                       type="button"
+                      aria-label={`View schedule for route ${schedule.route?.routeNo ?? ""}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         onSelectSchedule?.(schedule);
@@ -140,15 +148,6 @@ const BusScheduleTable = ({
         </table>
       </div>
 
-      <div className="flex justify-center border-t border-border p-4 bg-card shrink-0">
-        <button
-          type="button"
-          className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
-        >
-          {t("schedule_page.view_more")}
-          <IoChevronDown className="text-xs" />
-        </button>
-      </div>
     </div>
   );
 };

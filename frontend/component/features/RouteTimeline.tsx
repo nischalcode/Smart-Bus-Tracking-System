@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import type { RouteStop } from "@/utils/api";
 
 type Props = {
@@ -9,28 +8,20 @@ type Props = {
 };
 
 function computeTime(baseTime: string, offsetMin: number): string {
-  const [time, period] = baseTime.split(" ");
-  let [h, m] = time.split(":").map(Number);
-  m += offsetMin;
-  while (m >= 60) {
-    h += 1;
-    m -= 60;
-  }
-  while (m < 0) {
-    h -= 1;
-    m += 60;
-  }
-  let newPeriod = period;
-  if (h >= 12) {
-    newPeriod = "PM";
-    if (h > 12) h -= 12;
-  } else if (h === 0) {
-    h = 12;
-    newPeriod = "AM";
-  } else {
-    newPeriod = period;
-  }
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")} ${newPeriod}`;
+  const match = /^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i.exec(baseTime.trim());
+  if (!match) return baseTime;
+
+  let hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const period = match[3]?.toUpperCase();
+  if (period === "PM" && hour < 12) hour += 12;
+  if (period === "AM" && hour === 12) hour = 0;
+
+  const minutesOfDay = (hour * 60 + minute + offsetMin + 1440) % 1440;
+  const hour24 = Math.floor(minutesOfDay / 60);
+  const hour12 = hour24 % 12 || 12;
+  const suffix = hour24 < 12 ? "AM" : "PM";
+  return `${String(hour12).padStart(2, "0")}:${String(minutesOfDay % 60).padStart(2, "0")} ${suffix}`;
 }
 
 const RouteTimeline = ({ stops, firstBus = "05:30 AM" }: Props) => {

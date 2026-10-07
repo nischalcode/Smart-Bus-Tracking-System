@@ -11,6 +11,7 @@ type Props = {
   activeCategory: string;
   onCategoryChange: (category: string) => void;
   onMarkAllRead: () => void;
+  allowMarkRead?: boolean;
 };
 
 const NotificationHeader = ({
@@ -18,6 +19,7 @@ const NotificationHeader = ({
   activeCategory,
   onCategoryChange,
   onMarkAllRead,
+  allowMarkRead = true,
 }: Props) => {
   const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
@@ -68,7 +70,7 @@ const NotificationHeader = ({
   ];
 
   return (
-    <div className="mb-6 flex flex-col justify-between gap-4 rounded-xl border border-gray-200 bg-white p-2 shadow-sm lg:flex-row lg:items-center">
+    <div className="mb-6 flex min-w-0 flex-col justify-between gap-4 rounded-xl border border-border bg-card p-2 shadow-sm lg:flex-row lg:items-center">
       <div className="flex flex-wrap items-center gap-2">
         {categories.map((item) => (
           <button
@@ -78,8 +80,8 @@ const NotificationHeader = ({
             className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition
                 ${
                   activeCategory === item.name
-                    ? "bg-green-100 text-primary"
-                    : "text-gray-600 hover:bg-gray-100"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted"
                 }`}
           >
             {item.label}
@@ -93,31 +95,31 @@ const NotificationHeader = ({
         ))}
       </div>
 
-      <button
-        type="button"
-        onClick={async () => {
-          try {
-            setLoading(true);
-            await onMarkAllRead();
-          } finally {
-            setLoading(false);
-          }
-        }}
-        disabled={loading}
-        className={`flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 ${
-          loading ? "opacity-60 cursor-wait" : ""
-        }`}
-      >
-        <CheckCheck className="h-4 w-4" />
-
-        <span>
-          {loading
-            ? t("notifications.marking")
-            : t("notifications.mark_all_read")}
-        </span>
-
-        <ChevronDown className="h-4 w-4" />
-      </button>
+      {allowMarkRead && (
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              setLoading(true);
+              await onMarkAllRead();
+            } finally {
+              setLoading(false);
+            }
+          }}
+          disabled={loading}
+          className={`flex items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted ${
+            loading ? "opacity-60 cursor-wait" : ""
+          }`}
+        >
+          <CheckCheck className="h-4 w-4" />
+          <span>
+            {loading
+              ? t("notifications.marking")
+              : t("notifications.mark_all_read")}
+          </span>
+          <ChevronDown className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 };

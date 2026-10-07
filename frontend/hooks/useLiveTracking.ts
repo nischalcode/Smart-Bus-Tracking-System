@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { io, Socket } from "socket.io-client";
+import { io, type Socket } from "socket.io-client";
 import {
   fetchApi,
-  RoutesResponse,
-  RouteData,
-  TrackingResponse,
-  TrackingData,
+  type RoutesResponse,
+  type RouteData,
+  type TrackingResponse,
+  type TrackingData,
 } from "@/utils/api";
 
 const SOCKET_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:9006/api").replace(/\/api$/, "");
@@ -18,14 +18,21 @@ export function useLiveTracking() {
   const [tracking, setTracking] = useState<TrackingData[]>([]);
   const [loadingRoutes, setLoadingRoutes] = useState(true);
   const [loadingTracking, setLoadingTracking] = useState(true);
+  const [routesError, setRoutesError] = useState<string | null>(null);
+  const [trackingError, setTrackingError] = useState<string | null>(null);
 
   // ── Load routes ────────────────────────────────────────────────────────────
   useEffect(() => {
-    fetchApi<RoutesResponse>("/routes")
+    fetchApi<RoutesResponse>("/routes?limit=100")
       .then((data) => {
-        if (data.success && data.routes) setRoutes(data.routes);
+        if (!data.success) throw new Error("Route service returned an unsuccessful response.");
+        setRoutes(data.routes ?? []);
+        setRoutesError(null);
       })
-      .catch((err) => console.error("Failed to load routes:", err))
+      .catch((err) => {
+        console.error("Failed to load routes:", err);
+        setRoutesError(err instanceof Error ? err.message : "Unable to load routes");
+      })
       .finally(() => setLoadingRoutes(false));
   }, []);
 
@@ -38,9 +45,14 @@ export function useLiveTracking() {
       fetchApi<TrackingResponse>("/tracking")
         .then((data) => {
           if (!mounted) return;
-          if (data.success && data.tracking) setTracking(data.tracking);
+          if (!data.success) throw new Error("Tracking service returned an unsuccessful response.");
+          setTracking(data.tracking ?? []);
+          setTrackingError(null);
         })
-        .catch((err) => console.error("Failed to load tracking:", err))
+        .catch((err) => {
+          console.error("Failed to load tracking:", err);
+          setTrackingError(err instanceof Error ? err.message : "Unable to load bus locations");
+        })
         .finally(() => {
           if (mounted) setLoadingTracking(false);
         });
@@ -105,6 +117,8 @@ export function useLiveTracking() {
     tracking,
     loadingRoutes,
     loadingTracking,
+    routesError,
+    trackingError,
     trackingByRouteId,
   };
 }

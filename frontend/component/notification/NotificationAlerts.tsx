@@ -1,11 +1,13 @@
 "use client";
 
 import { TriangleAlert, Construction } from "lucide-react";
-import { NotificationData } from "@/utils/api";
+import type { NotificationData } from "@/utils/api";
 
 type Props = {
   notifications?: NotificationData[];
   onViewAllAlerts?: () => void;
+  loading?: boolean;
+  error?: string | null;
 };
 
 function timeAgo(dateStr?: string) {
@@ -21,39 +23,22 @@ function timeAgo(dateStr?: string) {
   return `${days} day${days > 1 ? "s" : ""} ago`;
 }
 
-const DEFAULT_ALERTS = [
-  {
-    title: "Delay on Route 9C",
-    description: "15 min delay",
-    time: "5 min ago",
-    icon: TriangleAlert,
-    iconBg: "bg-red-100",
-    iconColor: "text-red-600",
-  },
-  {
-    title: "Road Closure on Airport Road",
-    description: "Jun 2 - Jun 4",
-    time: "1 hour ago",
-    icon: Construction,
-    iconBg: "bg-orange-100",
-    iconColor: "text-orange-600",
-  },
-];
-
-const NotificationAlerts = ({ notifications, onViewAllAlerts }: Props) => {
-  const alerts = (notifications && notifications.length)
-    ? notifications
-        .filter((n) => (n.badge || "").toLowerCase() === "alert")
-        .slice(0, 3)
-        .map((n) => ({
-          title: n.title,
-          description: n.description,
-          time: timeAgo(n.createdAt),
-          icon: (n.icon === "TriangleAlert" ? TriangleAlert : TriangleAlert),
-          iconBg: n.iconBg || "bg-red-100",
-          iconColor: n.iconColor || "text-red-600",
-        }))
-    : DEFAULT_ALERTS;
+const NotificationAlerts = ({
+  notifications = [],
+  onViewAllAlerts,
+  loading = false,
+  error,
+}: Props) => {
+  const alerts = notifications
+    .filter((n) => (n.badge || "").toLowerCase() === "alert")
+    .slice(0, 3)
+    .map((n) => ({
+      ...n,
+      time: timeAgo(n.createdAt),
+      icon: n.icon === "Construction" ? Construction : TriangleAlert,
+      iconBg: n.iconBg || "bg-red-100",
+      iconColor: n.iconColor || "text-red-600",
+    }));
 
   return (
     <div className="rounded-xl border border-border bg-card p-5 shadow-sm transition-colors">
@@ -61,6 +46,7 @@ const NotificationAlerts = ({ notifications, onViewAllAlerts }: Props) => {
         <h3 className="text-base font-bold text-foreground sm:text-lg">Active Alerts</h3>
 
         <button
+          type="button"
           onClick={onViewAllAlerts}
           className="text-xs font-medium text-primary hover:underline sm:text-sm"
         >
@@ -68,31 +54,44 @@ const NotificationAlerts = ({ notifications, onViewAllAlerts }: Props) => {
         </button>
       </div>
 
-      <div className="space-y-4">
-        {alerts.map((alert, index) => {
-          const Icon = alert.icon;
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Loading alerts…</p>
+      ) : error ? (
+        <p role="alert" className="text-sm text-danger">
+          Alerts are unavailable: {error}
+        </p>
+      ) : alerts.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No active alerts.</p>
+      ) : (
+        <div className="space-y-4">
+          {alerts.map((alert) => {
+            const Icon = alert.icon;
+            return (
+              <div key={alert._id} className="flex items-start gap-3">
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${alert.iconBg} ${alert.iconColor}`}
+                >
+                  <Icon className="h-4 w-4" />
+                </div>
 
-          return (
-            <div key={index} className="flex items-start gap-3">
-              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${alert.iconBg} ${alert.iconColor}`}>
-                <Icon className="h-4 w-4" />
-              </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="break-words text-sm font-semibold text-foreground">
+                    {alert.title}
+                  </h4>
 
-              <div className="flex-1">
-                <h4 className="text-sm font-semibold text-foreground">{alert.title}</h4>
-
-                <div className="mt-1 flex justify-between gap-4 text-xs text-muted-foreground">
-                  <span>{alert.description}</span>
-
-                  <span>{alert.time}</span>
+                  <div className="mt-1 flex flex-wrap justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    <span>{alert.description}</span>
+                    <span>{alert.time}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       <button
+        type="button"
         onClick={onViewAllAlerts}
         className="mt-4 w-full rounded-lg border border-danger/30 py-2 text-sm font-medium text-danger transition hover:bg-danger/10 active:scale-[0.98]"
       >

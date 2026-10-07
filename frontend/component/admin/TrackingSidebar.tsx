@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Search, Gauge } from "lucide-react";
 import type { TrackingData } from "@/utils/api";
+import { isTrackingFresh } from "@/utils/api";
 import StatusBadge from "@/component/ui/StatusBadge";
 import { formatRouteName } from "@/utils/routeFormatter";
 
@@ -12,25 +13,47 @@ interface TrackingSidebarProps {
   onSelect: (id: string) => void;
   hideSearch?: boolean;
   externalSearch?: string;
+  stopNamesByRoute?: Record<string, string[]>;
+  selectedDirection?: string;
+  naturalHeight?: boolean;
 }
 
-export default function TrackingSidebar({ tracking, selectedId, onSelect, hideSearch, externalSearch }: TrackingSidebarProps) {
+export default function TrackingSidebar({
+  tracking,
+  selectedId,
+  onSelect,
+  hideSearch,
+  externalSearch,
+  stopNamesByRoute = {},
+  selectedDirection = "",
+  naturalHeight = false,
+}: TrackingSidebarProps) {
   const [localSearch, setLocalSearch] = useState("");
   const search = externalSearch !== undefined ? externalSearch : localSearch;
 
   const filtered = tracking.filter((t) => {
+    if (selectedDirection && t.direction !== selectedDirection) return false;
     if (!search.trim()) return true;
     const q = search.toLowerCase();
+    const routeId = typeof t.route === "string" ? t.route : t.route?._id;
     return (
       t.bus?.busNumber?.toLowerCase().includes(q) ||
       t.route?.routeNo?.toLowerCase().includes(q) ||
       t.route?.from?.toLowerCase().includes(q) ||
-      t.route?.to?.toLowerCase().includes(q)
+      t.route?.to?.toLowerCase().includes(q) ||
+      t.route?.stops?.some((stop) => stop.name.toLowerCase().includes(q)) ||
+      stopNamesByRoute[routeId ?? ""]?.some((name) =>
+        name.toLowerCase().includes(q),
+      )
     );
   });
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-border bg-card p-5 shadow-sm">
+    <div
+      className={`flex flex-col rounded-2xl border border-border bg-card p-5 shadow-sm ${
+        naturalHeight ? "h-auto lg:h-full" : "h-full"
+      }`}
+    >
       <h3 className="text-base font-bold text-foreground">Tracked Vehicles</h3>
       <p className="mt-0.5 text-xs text-muted-foreground">
         Select a bus to focus the map on its live position.
@@ -49,39 +72,58 @@ export default function TrackingSidebar({ tracking, selectedId, onSelect, hideSe
         </div>
       )}
 
-      <div className="scrollbar-thin mt-4 flex-1 space-y-2 overflow-y-auto pr-1">
+      <div
+        className={`scrollbar-thin mt-4 space-y-2 pr-1 ${
+          naturalHeight
+            ? "lg:flex-1 lg:overflow-y-auto"
+            : "flex-1 overflow-y-auto"
+        }`}
+      >
         {filtered.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">No tracked buses found.</p>
         ) : (
           filtered.map((t) => (
-            <button
-              key={t._id}
-              onClick={() => onSelect(t._id)}
-              className={`w-full rounded-xl border p-3 text-left transition-all ${
-                selectedId === t._id
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:bg-muted/60"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">
-                  {t.bus?.busNumber || "Bus"}
-                </span>
-                <StatusBadge
-                  label={t.status || "Live"}
-                  tone={t.status?.toLowerCase().includes("delay") ? "warning" : "success"}
-                  pulse
-                />
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t.route?.routeNo} • {formatRouteName(t.route?.from, t.route?.to)}
-              </p>
-              <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-                <Gauge className="h-3.5 w-3.5" />
-                {t.speed?.toFixed(0) ?? 0} km/h
-                {t.eta && <span>• ETA {t.eta}</span>}
-              </div>
-            </button>
+            (() => {
+              const fresh = isTrackingFresh(t);
+              const delayed = t.status?.toLowerCase().includes("delay");
+              return (
+                <button
+                  key={t._id}
+                  type="button"
+                  onClick={() => onSelect(t._id)}
+                  className={`w-full rounded-xl border p-3 text-left transition-all ${
+                    selectedId === t._id
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-muted/60"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold text-foreground">
+                      {t.bus?.busNumber || "Bus"}
+                    </span>
+                    <StatusBadge
+                      label={
+                        fresh
+                          ? t.status || "Live"
+                          : "Location unavailable"
+                      }
+                      tone={fresh && delayed ? "warning" : fresh ? "success" : "neutral"}
+                      pulse={fresh}
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t.route?.routeNo} • {formatRouteName(t.route?.from, t.route?.to)}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                    <Gauge className="h-3.5 w-3.5" />
+                    {fresh && typeof t.speed === "number"
+                      ? `${t.speed.toFixed(0)} km/h`
+                      : "Speed unavailable"}
+                    {fresh && t.eta && <span>• ETA {t.eta}</span>}
+                  </div>
+                </button>
+              );
+            })()
           ))
         )}
       </div>

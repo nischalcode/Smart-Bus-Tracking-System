@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell } from "lucide-react";
+import Link from "next/link";
 
 const NotificationBanner = () => {
   return (
@@ -19,19 +20,16 @@ const NotificationBanner = () => {
         </h3>
 
         <p className="mb-8 text-sm leading-6 text-muted-foreground">
-          Allow notifications to get real-time updates about your buses and
-          important alerts.
+          New service alerts are added here as soon as the transit team shares
+          them. Check the current service windows before you travel.
         </p>
 
-        <div className="flex gap-3">
-          <button className="flex-1 rounded-lg border border-border bg-card py-2 text-sm font-medium text-foreground transition hover:bg-muted">
-            Not Now
-          </button>
-
-          <button className="flex-1 rounded-lg bg-primary py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90">
-            Enable
-          </button>
-        </div>
+        <Link
+          href="/schedule"
+          className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+        >
+          View Schedule
+        </Link>
       </div>
     </div>
   );

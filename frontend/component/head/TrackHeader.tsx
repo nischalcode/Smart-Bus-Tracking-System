@@ -1,10 +1,10 @@
 "use client";
 
-import { Bell, Menu, X } from "lucide-react";
+import { Bell, Menu } from "lucide-react";
 import { headerConfig } from "./headerConfig";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { fetchApi, NotificationsResponse } from "@/utils/api";
+import { fetchApi, type NotificationsResponse } from "@/utils/api";
 import PublicActions from "@/component/head/HeaderActions/PublicActions";
 
 type Props = {
@@ -26,25 +26,20 @@ const TrackHeader = ({ onMenuToggle }: Props) => {
   useEffect(() => {
     let mounted = true;
 
-    fetchApi<NotificationsResponse>("/notifications")
+    const refreshCount = () =>
+      fetchApi<NotificationsResponse>(
+        "/notifications?recipient=public_user&limit=100",
+      )
       .then((data) => {
         if (!mounted) return;
         if (data.success && data.notifications)
           setNotificationCount(data.notifications.filter((n) => !n.read).length);
       })
-      .catch(() => {});
+      .catch((error) => console.error("Failed to load public notification count:", error));
 
-    const handler = () => {
-      fetchApi<NotificationsResponse>("/notifications")
-        .then((data) => {
-          if (!mounted) return;
-          if (data.success && data.notifications)
-            setNotificationCount(
-              data.notifications.filter((n) => !n.read).length
-            );
-        })
-        .catch(() => {});
-    };
+    void refreshCount();
+
+    const handler = () => void refreshCount();
 
     window.addEventListener("notifications:updated", handler);
 
@@ -55,9 +50,10 @@ const TrackHeader = ({ onMenuToggle }: Props) => {
   }, []);
 
   return (
-    <header className="flex h-20 items-center justify-between border-b border-border bg-card px-4 text-card-foreground sm:px-6 lg:px-8">
-      <div className="flex items-center gap-4">
+    <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border bg-card px-3 text-card-foreground sm:h-20 sm:gap-4 sm:px-6 lg:px-8">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-4">
         <button
+          type="button"
           onClick={onMenuToggle}
           className="rounded-lg p-2 text-muted-foreground hover:bg-muted md:hidden"
           aria-label="Toggle menu"
@@ -66,31 +62,34 @@ const TrackHeader = ({ onMenuToggle }: Props) => {
         </button>
 
         <div>
-          <h2 className="text-xl font-bold text-foreground sm:text-2xl">
+          <h2 className="truncate text-lg font-bold text-foreground sm:text-2xl">
             {page.title}
           </h2>
-          <p className="text-sm text-muted-foreground">{page.description}</p>
+          <p className="hidden truncate text-sm text-muted-foreground sm:block">
+            {page.description}
+          </p>
         </div>
       </div>
 
-      <div className="flex items-center gap-4 sm:gap-6">
+      <div className="flex shrink-0 items-center gap-2 sm:gap-4">
 
-        <div className="flex items-center gap-4 sm:gap-6">
+        <div className="flex items-center gap-2 sm:gap-4">
           <button
+            type="button"
             onClick={() => router.push("/notifications")}
-            className="relative"
-            aria-label="Notifications"
+            className="relative rounded-lg p-2"
+            aria-label={`Notifications${notificationCount > 0 ? `, ${notificationCount} unread` : ""}`}
           >
             <Bell className="h-6 w-6 text-muted-foreground hover:text-foreground" />
 
             {notificationCount > 0 && (
               <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
-                {notificationCount}
+                {notificationCount > 99 ? "99+" : notificationCount}
               </span>
             )}
           </button>
 
-          <PublicActions />
+          <PublicActions showAuthLinks={false} />
         </div>      
       </div>
     </header>

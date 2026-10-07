@@ -35,8 +35,11 @@ export async function fetchStopsByRoute(
   try {
     const data = await fetchApi<RouteStopResponse>(`/stops/${routeId}`);
     return data.stops;
-  } catch {
-    return null;
+  } catch (error) {
+    if (error instanceof Error && error.message === "No stop record found for this route.") {
+      return null;
+    }
+    throw error;
   }
 }
 
@@ -125,6 +128,14 @@ export interface RouteData {
   assignedBuses?: BusData[] | string[];
 }
 
+export function getRouteWaypoints(route?: RouteData): NamedStop[] {
+  return (route?.stops ?? []).flatMap((stop) =>
+    typeof stop.lat === "number" && typeof stop.lng === "number"
+      ? [{ name: stop.name, lat: stop.lat, lng: stop.lng, type: stop.type }]
+      : [],
+  );
+}
+
 export interface RoutesResponse {
   success: boolean;
   routes: RouteData[];
@@ -181,6 +192,9 @@ export interface TrackingData {
   latitude: number;
   longitude: number;
   speed: number;
+  timestamp?: string;
+  createdAt?: string;
+  updatedAt?: string;
   currentStop?: string;
   nextStop?: string;
   distanceToNextStop?: number;
@@ -193,6 +207,23 @@ export interface TrackingData {
   stopETAs?: { name: string; distance: number; eta: string }[];
   isDeviated?: boolean;
   deviationDistance?: number;
+}
+
+export const TRACKING_STALE_AFTER_MS = 60_000;
+
+export function isTrackingFresh(
+  tracking: TrackingData,
+  now = Date.now(),
+): boolean {
+  const locationTime = Date.parse(
+    tracking.timestamp ?? tracking.updatedAt ?? tracking.createdAt ?? "",
+  );
+
+  return (
+    Number.isFinite(locationTime) &&
+    locationTime <= now + 30_000 &&
+    now - locationTime <= TRACKING_STALE_AFTER_MS
+  );
 }
 
 export interface TrackingResponse {

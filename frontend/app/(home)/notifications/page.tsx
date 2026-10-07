@@ -15,12 +15,12 @@ import NotificationHeader from "@/component/head/NotificationHeader";
 import NotificationAlerts from "@/component/notification/NotificationAlerts";
 import NotificationBanner from "@/component/notification/NotificationBanner";
 import NotificationItems from "@/component/notification/NotificationItems";
-import NotificationSettings from "@/component/settings/NotificationSettings";
 import TrackLayout from "@/component/track-layout/TrackLayout";
 import { useLanguage } from "@/context/LanguageContext";
 import type { NotificationData, NotificationsResponse } from "@/utils/api";
 import { fetchApi } from "@/utils/api";
 import ExpandableList from "@/component/ui/ExpandableList";
+import { useAuth } from "@/context/AuthContext";
 
 const ICON_MAP: Record<string, LucideIcon> = {
   TriangleAlert,
@@ -33,17 +33,27 @@ const ICON_MAP: Record<string, LucideIcon> = {
 
 const Page = () => {
   const { t } = useLanguage();
+  const { isAuthenticated } = useAuth();
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("All");
 
   useEffect(() => {
-    fetchApi<NotificationsResponse>("/notifications?recipient=public_user")
+    fetchApi<NotificationsResponse>(
+      "/notifications?recipient=public_user&limit=100",
+    )
       .then((data) => {
         if (data.success && data.notifications)
           setNotifications(data.notifications);
       })
-      .catch((err) => console.error("Failed to load notifications:", err))
+      .catch((err) => {
+        console.error("Failed to load notifications:", err);
+        setError(
+          err instanceof Error ? err.message : "Unable to load service alerts.",
+        );
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -61,6 +71,7 @@ const Page = () => {
   }, []);
 
   async function markAllAsRead() {
+    setActionError(null);
     try {
       await fetchApi<{ success: boolean; message?: string }>(
         "/notifications/mark-all-read",
@@ -70,10 +81,14 @@ const Page = () => {
       window.dispatchEvent(new CustomEvent("notifications:updated"));
     } catch (err) {
       console.error("Failed to mark all read:", err);
+      setActionError(
+        err instanceof Error ? err.message : "Unable to update notifications.",
+      );
     }
   }
 
   async function markAsRead(id: string) {
+    setActionError(null);
     try {
       await fetchApi<{ success: boolean }>(`/notifications/${id}/read`, {
         method: "PATCH",
@@ -85,6 +100,9 @@ const Page = () => {
       window.dispatchEvent(new CustomEvent("notifications:updated"));
     } catch (err) {
       console.error("Failed to mark read:", err);
+      setActionError(
+        err instanceof Error ? err.message : "Unable to update notification.",
+      );
     }
   }
 
@@ -94,21 +112,37 @@ const Page = () => {
 
   return (
     <TrackLayout>
-      <div className="flex flex-col gap-6 p-4 sm:p-5 lg:flex-row lg:gap-10">
-        <div className="flex w-full flex-col gap-3 lg:w-2/3">
+      <div className="flex min-w-0 flex-col gap-6 p-4 sm:p-5 lg:flex-row lg:gap-6">
+        <div className="flex min-w-0 w-full flex-col gap-3 lg:flex-[2]">
           <div>
             <NotificationHeader
               notifications={notifications}
               activeCategory={activeCategory}
               onCategoryChange={setActiveCategory}
               onMarkAllRead={markAllAsRead}
+              allowMarkRead={isAuthenticated}
             />
           </div>
 
           <div>
+            {actionError && (
+              <div
+                role="alert"
+                className="mb-3 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-danger"
+              >
+                {actionError}
+              </div>
+            )}
             {loading ? (
               <div className="p-6 text-center text-gray-500">
                 {t("notifications.loading")}
+              </div>
+            ) : error ? (
+              <div
+                role="alert"
+                className="rounded-xl border border-danger/30 bg-danger/5 p-6 text-center text-sm text-danger"
+              >
+                Unable to load service alerts: {error}
               </div>
             ) : (
               (() => {
@@ -134,52 +168,54 @@ const Page = () => {
                 }
 
                 return (
-                  <div className="max-h-[700px] overflow-y-auto pr-2">
-                    <ExpandableList
-                      items={filtered}
-                      initialCount={5}
-                      showMoreLabel={t("notifications.load_more") ?? "Load More"}
-                      showLessLabel="Show Less"
-                      renderItem={(n) => {
-                        const Icon = ICON_MAP[n.icon] || TriangleAlert;
+                  <ExpandableList
+                    items={filtered}
+                    initialCount={5}
+                    showMoreLabel={t("notifications.load_more") ?? "Load More"}
+                    showLessLabel="Show Less"
+                    containerClassName="space-y-3"
+                    renderItem={(n) => {
+                      const Icon = ICON_MAP[n.icon] || TriangleAlert;
 
-                        return (
-                          <NotificationItems
-                            key={n._id}
-                            icon={Icon}
-                            title={n.title}
-                            description={n.description}
-                            badge={n.badge}
-                            time={new Date(n.createdAt).toLocaleString()}
-                            iconBg={n.iconBg}
-                            iconColor={n.iconColor}
-                            badgeBg={n.badgeBg}
-                            badgeColor={n.badgeColor}
-                            read={!!n.read}
-                            onMarkRead={() => markAsRead(n._id)}
-                          />
-                        );
-                      }}
-                    />
-                  </div>
+                      return (
+                        <NotificationItems
+                          key={n._id}
+                          icon={Icon}
+                          title={n.title}
+                          description={n.description}
+                          badge={n.badge}
+                          time={new Date(n.createdAt).toLocaleString()}
+                          iconBg={n.iconBg}
+                          iconColor={n.iconColor}
+                          badgeBg={n.badgeBg}
+                          badgeColor={n.badgeColor}
+                          read={!!n.read}
+                          onMarkRead={
+                            isAuthenticated
+                              ? () => markAsRead(n._id)
+                              : undefined
+                          }
+                        />
+                      );
+                    }}
+                  />
                 );
               })()
             )}
           </div>
         </div>
 
-        <div className="flex w-full flex-col gap-3 lg:w-1/3">
+        <div className="flex min-w-0 w-full flex-col gap-3 lg:flex-1">
           <div>
             <NotificationAlerts
               notifications={notifications}
+              loading={loading}
+              error={error}
               onViewAllAlerts={() => {
                 setActiveCategory("Alerts");
                 scrollToTop();
               }}
             />
-          </div>
-          <div>
-            <NotificationSettings />
           </div>
           <div>
             <NotificationBanner />

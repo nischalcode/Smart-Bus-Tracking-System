@@ -23,6 +23,7 @@ type Route = {
   color: string;
   active: boolean;
   hasTracking?: boolean;
+  activeBusCount?: number;
 };
 
 const RouteSidebar = ({
@@ -48,7 +49,7 @@ const RouteSidebar = ({
   });
 
   return (
-    <div className="flex h-[28rem] w-full flex-col rounded-2xl border border-border bg-card p-4 shadow-sm transition-colors sm:p-6 md:h-[34rem]">
+    <div className="flex h-auto w-full flex-col rounded-2xl border border-border bg-card p-4 shadow-sm transition-colors sm:p-6">
       <h3 className="mb-2 text-xl font-bold text-foreground">
         {title || t('tracking.title')}
       </h3>
@@ -70,7 +71,7 @@ const RouteSidebar = ({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin">
+      <div className="pr-2 scrollbar-thin">
         <h4 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {t('tracking.popular_routes')}
         </h4>
@@ -88,14 +89,15 @@ const RouteSidebar = ({
           >
             {(visibleFiltered) => (
               <div className="space-y-3">
-                {visibleFiltered.map((route, index) => (
-                  <div
-                    key={index}
+                {visibleFiltered.map((route) => (
+                  <button
+                    type="button"
+                    key={`${route.number}-${route.route}`}
                     onClick={() => {
                       const originalIndex = routes.indexOf(route);
                       onSelect?.(originalIndex);
                     }}
-                    className={`flex cursor-pointer items-center justify-between rounded-xl p-4 transition-all ${
+                    className={`flex w-full cursor-pointer items-center justify-between rounded-xl p-4 text-left transition-all ${
                       route.active
                         ? 'border-2 border-primary bg-primary/10'
                         : 'border border-border bg-card hover:border-primary/50'
@@ -129,7 +131,7 @@ const RouteSidebar = ({
                     ) : (
                       <Clock3 className="h-4 w-4 text-muted-foreground" />
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
             )}

@@ -1,10 +1,11 @@
 "use client";
 
-import { RouteData, TrackingData, NamedStop } from "@/utils/api";
+import type { RouteData, TrackingData, NamedStop } from "@/utils/api";
 import { MapPin, Navigation, Clock, Activity, ListOrdered } from "lucide-react";
 import StatusBadge from "@/component/ui/StatusBadge";
 import { formatRouteName } from "@/utils/routeFormatter";
 import { routeDistanceKm } from "@/utils/haversine";
+import { isTrackingFresh } from "@/utils/api";
 
 interface RouteDetailsProps {
   route: RouteData;
@@ -15,7 +16,7 @@ interface RouteDetailsProps {
 export default function RouteDetails({ route, tracking, namedStops }: RouteDetailsProps) {
   const activeBusesCount = tracking.filter(t => {
     const rId = typeof t.route === "string" ? t.route : t.route?._id;
-    return rId === route._id;
+    return rId === route._id && isTrackingFresh(t);
   }).length;
   
   const distance = routeDistanceKm(route.pathCoordinates);
@@ -36,7 +37,7 @@ export default function RouteDetails({ route, tracking, namedStops }: RouteDetai
             )}
           </div>
         </div>
-        <StatusBadge label={route.status || "Active"} tone={route.active ? "success" : "warning"} pulse={route.active} />
+        <StatusBadge label={route.status || "Status unavailable"} tone={route.active ? "success" : "warning"} pulse={route.active} />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
@@ -49,13 +50,13 @@ export default function RouteDetails({ route, tracking, namedStops }: RouteDetai
         <div className="flex flex-col items-center justify-center rounded-lg bg-muted p-3 text-center">
           <Navigation className="mb-1 h-5 w-5 text-primary" />
           <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Length</span>
-          <span className="text-sm font-semibold">{distance > 0 ? `${distance.toFixed(1)} km` : "N/A"}</span>
+          <span className="text-sm font-semibold">{distance > 0 ? `${distance.toFixed(1)} km` : "Unavailable"}</span>
         </div>
 
         <div className="flex flex-col items-center justify-center rounded-lg bg-muted p-3 text-center">
           <Clock className="mb-1 h-5 w-5 text-primary" />
           <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Frequency</span>
-          <span className="text-sm font-semibold">{route.frequency || "N/A"}</span>
+          <span className="text-sm font-semibold">{route.frequency || "Unavailable"}</span>
         </div>
 
         <div className="flex flex-col items-center justify-center rounded-lg bg-muted p-3 text-center">
@@ -69,10 +70,16 @@ export default function RouteDetails({ route, tracking, namedStops }: RouteDetai
         <h4 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
           <MapPin className="h-4 w-4 text-primary" /> All Stops
         </h4>
-        <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto scrollbar-thin">
+        <div className="flex flex-wrap gap-2">
           {namedStops.length > 0 ? (
             namedStops.map((stop, i) => (
-              <span key={i} className="rounded-full bg-muted/50 border border-border px-3 py-1 text-xs font-medium text-muted-foreground">
+              <span key={`${stop.name}-${i}`} className="rounded-full bg-muted/50 border border-border px-3 py-1 text-xs font-medium text-muted-foreground">
+                {stop.name}
+              </span>
+            ))
+          ) : route.stops?.length ? (
+            route.stops.map((stop, i) => (
+              <span key={stop._id || `${stop.name}-${i}`} className="rounded-full bg-muted/50 border border-border px-3 py-1 text-xs font-medium text-muted-foreground">
                 {stop.name}
               </span>
             ))

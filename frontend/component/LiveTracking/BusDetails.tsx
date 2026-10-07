@@ -4,12 +4,14 @@ import { MapPin, Navigation, Clock, Gauge, Bus, User, Activity } from "lucide-re
 import type { TrackingData } from "@/utils/api";
 import StatusBadge from "@/component/ui/StatusBadge";
 import { formatRouteName } from "@/utils/routeFormatter";
+import { isTrackingFresh } from "@/utils/api";
 
 interface BusDetailsProps {
   tracking: TrackingData;
 }
 
 export default function BusDetails({ tracking }: BusDetailsProps) {
+  const isFresh = isTrackingFresh(tracking);
   const isDelayed = tracking.status?.toLowerCase().includes("delay");
 
   return (
@@ -20,13 +22,17 @@ export default function BusDetails({ tracking }: BusDetailsProps) {
             <Bus className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="font-bold text-foreground">{tracking.bus?.busNumber || "N/A"}</h3>
+            <h3 className="font-bold text-foreground">{tracking.bus?.busNumber || "Bus"}</h3>
             <p className="text-xs text-muted-foreground">
               {tracking.route?.routeNo} • {formatRouteName(tracking.route?.from, tracking.route?.to)}
             </p>
           </div>
         </div>
-        <StatusBadge label={tracking.status || "Live"} tone={isDelayed ? "warning" : "success"} pulse />
+        <StatusBadge
+          label={isFresh ? tracking.status || "Live" : "Location unavailable"}
+          tone={!isFresh ? "neutral" : isDelayed ? "warning" : "success"}
+          pulse={isFresh}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -34,14 +40,14 @@ export default function BusDetails({ tracking }: BusDetailsProps) {
           <User className="h-4 w-4 text-muted-foreground" />
           <div className="flex flex-col">
             <span className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">Driver</span>
-            <span className="text-sm font-medium">{tracking.driverName || "N/A"}</span>
+            <span className="text-sm font-medium">{tracking.driverName || "Driver unavailable"}</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Navigation className="h-4 w-4 text-muted-foreground" />
           <div className="flex flex-col">
             <span className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">Direction</span>
-            <span className="text-sm font-medium">{tracking.direction || "N/A"}</span>
+            <span className="text-sm font-medium">{tracking.direction || "Direction unavailable"}</span>
           </div>
         </div>
       </div>
@@ -52,7 +58,9 @@ export default function BusDetails({ tracking }: BusDetailsProps) {
             <MapPin className="h-4 w-4 text-primary" />
             <span className="text-sm text-muted-foreground">Current Stop</span>
           </div>
-          <span className="text-sm font-semibold">{tracking.currentStop || "N/A"}</span>
+          <span className="text-sm font-semibold">
+            {isFresh ? tracking.currentStop || "Unavailable" : "Unavailable"}
+          </span>
         </div>
         
         <div className="flex justify-between items-center">
@@ -60,7 +68,9 @@ export default function BusDetails({ tracking }: BusDetailsProps) {
             <MapPin className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">Next Stop</span>
           </div>
-          <span className="text-sm font-semibold">{tracking.nextStop || "N/A"}</span>
+          <span className="text-sm font-semibold">
+            {isFresh ? tracking.nextStop || "Unavailable" : "Unavailable"}
+          </span>
         </div>
 
         <div className="flex justify-between items-center">
@@ -68,7 +78,11 @@ export default function BusDetails({ tracking }: BusDetailsProps) {
             <Gauge className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">Speed</span>
           </div>
-          <span className="text-sm font-semibold">{tracking.speed?.toFixed(0) || 0} km/h</span>
+          <span className="text-sm font-semibold">
+            {isFresh && typeof tracking.speed === "number"
+              ? `${tracking.speed.toFixed(0)} km/h`
+              : "Unavailable"}
+          </span>
         </div>
 
         <div className="flex justify-between items-center">
@@ -76,7 +90,7 @@ export default function BusDetails({ tracking }: BusDetailsProps) {
             <Clock className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">ETA</span>
           </div>
-          <span className="text-sm font-semibold">{tracking.eta || "N/A"}</span>
+          <span className="text-sm font-semibold">{isFresh ? tracking.eta || "Unavailable" : "Unavailable"}</span>
         </div>
 
         <div className="flex justify-between items-center">
@@ -84,7 +98,11 @@ export default function BusDetails({ tracking }: BusDetailsProps) {
             <Activity className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">Remaining</span>
           </div>
-          <span className="text-sm font-semibold">{tracking.remainingDistance ? `${tracking.remainingDistance.toFixed(1)} km` : "N/A"}</span>
+          <span className="text-sm font-semibold">
+            {isFresh && typeof tracking.remainingDistance === "number"
+              ? `${tracking.remainingDistance.toFixed(1)} km`
+              : "Unavailable"}
+          </span>
         </div>
       </div>
     </div>
